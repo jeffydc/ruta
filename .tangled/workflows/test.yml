@@ -1,0 +1,13 @@
+when:
+  - event: ['push', 'pull_request']
+    branch: ['main']
+
+engine: nixery
+
+steps:
+  - name: nix develop -c pnpm i
+    command: nix develop -c pnpm i
+  - name: nix develop -c pnpm t
+    command: nix develop -c pnpm t
+  - name: nix develop -c pnpm fmt-check
+    command: nix develop -c pnpm fmt-check
