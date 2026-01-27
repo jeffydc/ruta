@@ -1,0 +1,25 @@
+{
+	"name": "@jeffydc/ruta-svelte",
+	"version": "0.0.1769439666",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./mod.svelte.ts",
+		"./vite": "./vite-plugin.ts",
+		"./components": "./components.ts"
+	},
+	"scripts": {
+		"publish": "jsr publish --dry-run"
+	},
+	"dependencies": {
+		"@jeffydc/ruta-core": "workspace:*"
+	},
+	"devDependencies": {
+		"svelte": "5.47.1"
+	},
+	"peerDependencies": {
+		"svelte": "^5",
+		"vite": "^7"
+	},
+	"packageManager": "pnpm@10.26.1"
+}

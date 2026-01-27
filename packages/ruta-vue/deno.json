@@ -1,0 +1,14 @@
+{
+	"$schema": "https://jsr.io/schema/config-file.v1.json",
+	"name": "@jeffydc/ruta-vue",
+	"version": "0.0.1769439666",
+	"exports": {
+		".": "./mod.ts",
+		"./vite": "./vite-plugin.ts"
+	},
+	"license": "MIT",
+	"imports": {
+		"@jeffydc/ruta-core": "jsr:@jeffydc/ruta-core@0",
+		"vite": "npm:vite@^7"
+	}
+}

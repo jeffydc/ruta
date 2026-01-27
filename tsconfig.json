@@ -1,0 +1,30 @@
+{
+	"exclude": ["dist"],
+	"compilerOptions": {
+		// https://www.totaltypescript.com/tsconfig-cheat-sheet
+		/* Base Options: */
+		"esModuleInterop": true,
+		"skipLibCheck": false,
+		"target": "ESNext",
+		"allowJs": true,
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"moduleDetection": "force",
+		"isolatedModules": true,
+
+		/* Strictness */
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+
+		/* If NOT transpiling with TypeScript: */
+		"moduleResolution": "Bundler",
+		"module": "ESNext",
+		"noEmit": true,
+		"lib": ["ESNext", "DOM", "DOM.Iterable"],
+
+		/* Extra */
+		"checkJs": true,
+		"jsx": "preserve",
+		"jsxImportSource": "solid-js"
+	}
+}

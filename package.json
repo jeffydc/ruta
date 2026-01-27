@@ -1,0 +1,32 @@
+{
+	"name": "ruta-monorepo",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev-vue": "pnpm run --filter play-vue dev",
+		"build-vue": "pnpm run --filter play-vue build",
+		"preview-vue": "pnpm run --filter play-vue preview",
+		"dev-svelte": "pnpm run --filter play-svelte dev",
+		"build-svelte": "pnpm run --filter play-svelte build",
+		"preview-svelte": "pnpm run --filter play-svelte preview",
+		"fmt": "oxfmt",
+		"fmt-check": "oxfmt --check",
+		"lint": "oxlint --type-aware --type-check --fix --vue-plugin",
+		"typecheck": "pnpm run -r --parallel typecheck",
+		"test": "pnpm run -r --parallel test"
+	},
+	"devDependencies": {
+		"@sveltejs/vite-plugin-svelte": "6.2.4",
+		"@types/node": "25.0.9",
+		"@vitejs/plugin-vue": "6.0.3",
+		"@vitest/coverage-v8": "4.0.17",
+		"@vitest/ui": "4.0.17",
+		"jsr": "0.13.5",
+		"oxfmt": "0.26.0",
+		"oxlint": "1.41.0",
+		"typescript": "5.9.3",
+		"vite": "7.3.1",
+		"vitest": "4.0.17"
+	}
+}

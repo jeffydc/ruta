@@ -1,0 +1,24 @@
+{
+	"name": "@jeffydc/ruta-core",
+	"version": "0.0.1769439666",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./mod.ts",
+		"./vite": "./vite-plugin.ts"
+	},
+	"scripts": {
+		"test": "vitest --typecheck"
+	},
+	"dependencies": {
+		"@clack/prompts": "0.11.0",
+		"esm-env": "1.2.2"
+	},
+	"devDependencies": {
+		"@types/dom-navigation": "1.0.6"
+	},
+	"peerDependencies": {
+		"vite": "^7"
+	},
+	"packageManager": "pnpm@10.26.1"
+}

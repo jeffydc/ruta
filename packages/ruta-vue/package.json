@@ -1,0 +1,24 @@
+{
+	"name": "@jeffydc/ruta-vue",
+	"version": "0.0.1769439666",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./mod.ts",
+		"./vite": "./vite-plugin.ts"
+	},
+	"scripts": {
+		"publish": "jsr publish --dry-run"
+	},
+	"dependencies": {
+		"@jeffydc/ruta-core": "workspace:*"
+	},
+	"devDependencies": {
+		"vue": "3.5.27"
+	},
+	"peerDependencies": {
+		"vite": "^7",
+		"vue": "^3.5"
+	},
+	"packageManager": "pnpm@10.26.1"
+}
