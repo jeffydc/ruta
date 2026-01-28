@@ -7,9 +7,6 @@
 		".": "./mod.ts",
 		"./vite": "./vite-plugin.ts"
 	},
-	"scripts": {
-		"publish": "jsr publish --dry-run"
-	},
 	"dependencies": {
 		"@jeffydc/ruta-core": "workspace:*"
 	},
@@ -19,6 +16,5 @@
 	"peerDependencies": {
 		"vite": "^7",
 		"vue": "^3.5"
-	},
-	"packageManager": "pnpm@10.26.1"
+	}
 }

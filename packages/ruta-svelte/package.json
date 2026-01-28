@@ -8,18 +8,14 @@
 		"./vite": "./vite-plugin.ts",
 		"./components": "./components.ts"
 	},
-	"scripts": {
-		"publish": "jsr publish --dry-run"
-	},
 	"dependencies": {
 		"@jeffydc/ruta-core": "workspace:*"
 	},
 	"devDependencies": {
-		"svelte": "5.47.1"
+		"svelte": "5.48.5"
 	},
 	"peerDependencies": {
 		"svelte": "^5",
 		"vite": "^7"
-	},
-	"packageManager": "pnpm@10.26.1"
+	}
 }

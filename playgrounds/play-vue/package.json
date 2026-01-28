@@ -10,9 +10,9 @@
 	},
 	"devDependencies": {
 		"@jeffydc/ruta-vue": "workspace:*",
-		"@tanstack/vue-query": "5.92.8",
+		"@tanstack/vue-query": "5.92.9",
 		"@vue/tsconfig": "0.8.1",
 		"vue": "3.5.27",
-		"vue-tsc": "3.2.2"
+		"vue-tsc": "3.2.4"
 	}
 }
