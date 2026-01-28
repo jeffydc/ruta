@@ -17,7 +17,7 @@ for dir in "${PKGS_DIR}"/*; do
 	cp "${SCRIPT_DIR}/../LICENSE" "${dir}"
 done
 
-echo '' > "${PKGS_DIR}/ruta-vue/components.ts"
+# echo '' > "${PKGS_DIR}/ruta-vue/components.ts"
 echo '' > "${PKGS_DIR}/ruta-svelte/components.ts"
 
 set +x

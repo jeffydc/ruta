@@ -1,15 +1,19 @@
 {
 	"$schema": "https://jsr.io/schema/config-file.v1.json",
 	"name": "@jeffydc/ruta-svelte",
-	"version": "0.0.1769439666",
+	"version": "0.0.1769621381",
+	"license": "MIT",
 	"exports": {
 		".": "./mod.svelte.ts",
 		"./vite": "./vite-plugin.ts",
 		"./components": "./components.ts"
 	},
-	"license": "MIT",
 	"imports": {
 		"@jeffydc/ruta-core": "jsr:@jeffydc/ruta-core@0",
 		"vite": "npm:vite@^7"
+	},
+	"publish": {
+		"exclude": ["*.test.ts", "_types.d.ts", "*.json"],
+		"include": ["*.ts", "*.svelte", "README.md", "LICENSE"]
 	}
 }
