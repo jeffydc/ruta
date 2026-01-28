@@ -2,6 +2,13 @@ import { expect, expectTypeOf, test, vi } from 'vitest';
 
 import { Ruta, trimBase, resolvePath, createRouteBuilder } from './internal.ts';
 
+test(`${createRouteBuilder.name} path cannot include "/"`, () => {
+	const root = createRouteBuilder(null, '/').page();
+	expect(() => createRouteBuilder(root, '/child').page).toThrowErrorMatchingInlineSnapshot(
+		`[Error: [ruta error]: path cannot include "/".]`,
+	);
+});
+
 test(`${createRouteBuilder.name} root page`, () => {
 	const root = createRouteBuilder(null, '/').page({
 		parseParams: () => ({}),

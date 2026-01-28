@@ -451,6 +451,9 @@ export function createRouteBuilder<
 	layout: LayoutBuilder<TParentRouteConfig, TPath>;
 	page: PageBuilder<TParentRouteConfig, TPath>;
 } {
+	if (path !== '/') {
+		assert(!path.includes('/'), `path cannot include "/".`);
+	}
 	const route: Omit<AnyRouteConfig, 'comps' | '~layout' | '~page'> = {
 		path: resolvePath(parent?.path ?? '', path) as any,
 		loads: [], // [layout load, page load]
