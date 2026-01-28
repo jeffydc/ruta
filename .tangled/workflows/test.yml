@@ -11,3 +11,7 @@ steps:
     command: nix develop -c pnpm t
   - name: nix develop -c pnpm fmt-check
     command: nix develop -c pnpm fmt-check
+  - name: nix develop -c pnpm lint
+    command: nix develop -c pnpm lint packages
+  - name: nix develop -c pnpm typecheck
+    command: nix develop -c pnpm typecheck

@@ -8,6 +8,7 @@
 		"./vite": "./vite-plugin.ts"
 	},
 	"scripts": {
+		"typecheck": "tsc -b",
 		"test": "vitest --typecheck"
 	},
 	"dependencies": {
@@ -15,7 +16,8 @@
 		"esm-env": "1.2.2"
 	},
 	"devDependencies": {
-		"@types/dom-navigation": "1.0.6"
+		"@types/dom-navigation": "1.0.6",
+		"urlpattern-polyfill": "10.1.0"
 	},
 	"peerDependencies": {
 		"vite": "^7"

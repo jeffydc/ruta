@@ -8,6 +8,9 @@
 		"./vite": "./vite-plugin.ts",
 		"./components": "./components.ts"
 	},
+	"scripts": {
+		"typecheck": "tsc -b"
+	},
 	"dependencies": {
 		"@jeffydc/ruta-core": "workspace:*"
 	},

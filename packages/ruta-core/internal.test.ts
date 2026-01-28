@@ -190,8 +190,8 @@ test(`${Ruta.name} should remove hooks`, async () => {
 	const after1 = vi.fn();
 	const after2 = vi.fn();
 	const b1 = ruta.before(before1);
-	const b2 = ruta.after(after1);
-	const a1 = ruta.before(before2);
+	ruta.after(after1);
+	ruta.before(before2);
 	const a2 = ruta.after(after2);
 
 	b1();

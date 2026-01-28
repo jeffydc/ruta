@@ -1,6 +1,7 @@
+import type { VitePluginRutaOptions } from './vite-plugin.ts';
 import { test, expect } from 'vitest';
 
-import { VPR, VitePluginRutaOptions } from './vite-plugin.ts';
+import { VPR } from './vite-plugin.ts';
 
 function makeOptions(options?: VitePluginRutaOptions) {
 	return {

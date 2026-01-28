@@ -178,7 +178,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		// call navigate hooks if available
 		if (hooks.length) {
 			const hookArgs = this.#makeHookArgs();
-			const results = await Promise.all(
+			await Promise.all(
 				hooks.map((hook) =>
 					// wrap in async IIFE to catch all sync/async errors
 					(async () => hook(hookArgs))(),
@@ -333,7 +333,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 
 		let index = 0;
 		let found = true; // true first to add root node data
-		while (1) {
+		while (true) {
 			// root route is always matched, so need to add its data
 			// first, and continue the lookup.
 			if (found) {
@@ -411,6 +411,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 				dynNode.data.parseParams ? dynNode.data.parseParams(filtered) : filtered,
 			);
 		} catch (e) {
+			this.#capturedError = e;
 			// `parseParams` function can throw error to not match the params
 			return null;
 		}
@@ -425,7 +426,9 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 			// components are simply functions
 			// @ts-expect-error __ruta is added in node insertion to Trie
 			if (comp && comp.__ruta && typeof comp === 'function') {
-				const promise = comp()
+				// Without typecasting here, typechecking in
+				// ruta-vue, ruta-svelte fails.
+				const promise = (comp as RouteComponentLazy)()
 					.then((c) => {
 						// replace with the resolved component
 						return (route.comps[i] = c.default);

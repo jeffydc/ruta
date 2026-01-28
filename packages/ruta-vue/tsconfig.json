@@ -1,5 +1,4 @@
 {
-	"extends": "../../tsconfig.json",
-	"include": ["."],
-	"exclude": ["node_modules", "../ruta-svelte"]
+	"files": [],
+	"references": [{ "path": "./tsconfig.dom.json" }, { "path": "./tsconfig.node.json" }]
 }
