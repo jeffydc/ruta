@@ -301,7 +301,8 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 			if (isDynamic) {
 				node.dyn ??= { seg: segment };
 				node = node.dyn;
-			} else {
+			} //
+			else {
 				node.static ??= new Map();
 				if (!node.static.has(segment)) {
 					node.static.set(segment, { seg: segment });
@@ -323,47 +324,58 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	 */
 	#lookup(absPath: string): AnyMatchedRoute | null {
 		let node = this.#rootNode;
-		assert(node.data, `node.data should be defined, please file an issue.`);
 
 		const segments = absPath.split('/');
 		const params = {};
 		const comps: AnyMatchedRoute['comps'] = [];
-		const loads = [node.data.loads[0]];
-		const search = [node.data.search[0]];
-		this.#queueComps(node.data, comps, 0, 2);
+		const loads = [];
+		const search = [];
 
-		for (const segment of segments) {
+		let index = 0;
+		let found = true; // true first to add root node data
+		while (1) {
+			// root route is always matched, so need to add its data
+			// first, and continue the lookup.
+			if (found) {
+				found = false;
+				assert(node.data, `node.data should be defined, please file an issue.`);
+				// load function of +layout component of this route
+				loads.push(node.data.loads[0]);
+				// search function of +layout component of this route
+				search.push(node.data.search[0]);
+				// +error, +layout components of this route
+				this.#queueComps(node.data, comps, 0, 2);
+			}
+			// over length
+			if (index >= segments.length) break;
+
+			const segment = segments[index++];
 			// ignore empty string
 			if (!segment) continue;
 
 			const staticNode = node.static?.get(segment);
 			if (staticNode) {
 				node = staticNode;
-				assert(node.data, `node.data should be defined, please file an issue.`);
-				loads.push(node.data.loads[0]);
-				search.push(node.data.search[0]);
-				this.#queueComps(node.data, comps, 0, 2);
+				found = true;
 				continue;
 			}
 
 			const dynNode = this.#lookupDynamic(node, segment, params);
 			if (dynNode) {
 				node = dynNode;
-				assert(node.data, `node.data should be defined, please file an issue.`);
-				loads.push(node.data.loads[0]);
-				search.push(node.data.search[0]);
-				this.#queueComps(node.data, comps, 0, 2);
+				found = true;
 				continue;
 			}
 
 			return null;
 		}
 
+		assert(node.data, `node.data should be defined, please file an issue.`);
 		// load function of +page component of this route
 		loads.push(node.data.loads[1]);
 		// parseSearch function of +page component of this route
 		search.push(node.data.search[1]);
-		// push the +error, +page components of this route
+		// +error, +page components of this route
 		this.#queueComps(node.data, comps, 2, 4);
 		return {
 			path: node.data.path,
