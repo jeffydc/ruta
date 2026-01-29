@@ -16,12 +16,19 @@ export type VitePluginRutaOptions = {
 	 * Framework integration.
 	 */
 	framework: 'vue' | 'svelte';
+
+	/**
+	 * Framework integration package.
+	 */
+	pkg: string;
+
 	/**
 	 * The path to the router module.
 	 * Resolved relative to the Vite `root` config.
 	 * @default './src/router.ts'
 	 */
 	routerModule?: string;
+
 	/**
 	 * The directory where the routes are located.
 	 * Resolved relative to the Vite `root` config.
@@ -199,14 +206,15 @@ export class VPR {
 		this.framework = options.framework;
 		this.routerModule = options.routerModule;
 		this.routeDir = options.routeDir;
-		this.pkg = options.framework === 'vue' ? '@jeffydc/ruta-vue' : '@jeffydc/ruta-svelte';
+		this.pkg = options.pkg;
 		this.routeErrorFile = `error.${options.framework}`;
 		this.routeLayoutFile = `layout.${options.framework}`;
 		this.routePageFile = `page.${options.framework}`;
 		this.root = process.cwd();
 	}
 
-	get root() {
+	/** @internal */
+	get root(): string {
 		return this.#root;
 	}
 

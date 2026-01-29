@@ -8,6 +8,7 @@ function makeOptions(options?: VitePluginRutaOptions) {
 		framework: 'vue',
 		routerModule: './src/router.ts',
 		routeDir: './src/routes',
+		pkg: '@jeffydc/ruta-core',
 		...options,
 	} satisfies VitePluginRutaOptions;
 }
@@ -30,7 +31,7 @@ test('writeRoute should write root route', () => {
 	);
 
 	expect(code).toMatchInlineSnapshot(`
-		"import type * as $ from "@jeffydc/ruta-vue";
+		"import type * as $ from "@jeffydc/ruta-core";
 		import { route as current } from "./../../../src/routes/+route.config.ts";
 		export declare const getPageRoute: $.GetRoute<typeof current["~page"]>;
 		export declare const usePageRoute: $.GetRoute<typeof current["~page"]>;
@@ -38,15 +39,15 @@ test('writeRoute should write root route', () => {
 		export declare const useLayoutRoute: $.GetRoute<typeof current["~layout"]>;
 		export declare const getRouter: $.GetRouter<import("./../../../src/router.ts").Router>;
 		export declare const useRouter: $.GetRouter<import("./../../../src/router.ts").Router>;
-		export { getPageRoute, usePageRoute } from "@jeffydc/ruta-vue";
-		export { getLayoutRoute, useLayoutRoute } from "@jeffydc/ruta-vue";
-		export { getRouter, useRouter } from "@jeffydc/ruta-vue";
+		export { getPageRoute, usePageRoute } from "@jeffydc/ruta-core";
+		export { getLayoutRoute, useLayoutRoute } from "@jeffydc/ruta-core";
+		export { getRouter, useRouter } from "@jeffydc/ruta-core";
 		"
 	`);
 });
 
 test('writeRoute should write export parent route', () => {
-	const vpr = new VPR(makeOptions({ framework: 'svelte' }));
+	const vpr = new VPR(makeOptions());
 	const code = vpr.writeRoute(
 		{
 			dir: vpr.routeDir + '/no-layout',
@@ -56,7 +57,7 @@ test('writeRoute should write export parent route', () => {
 	);
 
 	expect(code).toMatchInlineSnapshot(`
-		"import type * as $ from "@jeffydc/ruta-svelte";
+		"import type * as $ from "@jeffydc/ruta-core";
 		import { route as current } from "./../../../../src/routes/no-layout/+route.config.ts";
 		export { route as parentRoute } from "./../../../../src/routes/+route.config.ts";
 		export declare const getPageRoute: $.GetRoute<typeof current["~page"]>;
@@ -65,9 +66,9 @@ test('writeRoute should write export parent route', () => {
 		export declare const useLayoutRoute: $.GetRoute<typeof current["~layout"]>;
 		export declare const getRouter: $.GetRouter<import("./../../../../src/router.ts").Router>;
 		export declare const useRouter: $.GetRouter<import("./../../../../src/router.ts").Router>;
-		export { getPageRoute, usePageRoute } from "@jeffydc/ruta-svelte";
-		export { getLayoutRoute, useLayoutRoute } from "@jeffydc/ruta-svelte";
-		export { getRouter, useRouter } from "@jeffydc/ruta-svelte";
+		export { getPageRoute, usePageRoute } from "@jeffydc/ruta-core";
+		export { getLayoutRoute, useLayoutRoute } from "@jeffydc/ruta-core";
+		export { getRouter, useRouter } from "@jeffydc/ruta-core";
 		"
 	`);
 });
