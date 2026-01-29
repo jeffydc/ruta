@@ -393,7 +393,6 @@ export class VPR {
 		const routerModule = relImportPath(genDir, this.routerModule);
 
 		const codes = [
-			`export * from "${this.pkg}";`,
 			`import type * as $ from "${this.pkg}";`,
 			`import { route as current } from "${current}";`,
 		];
@@ -409,6 +408,9 @@ export class VPR {
 			`export declare const useLayoutRoute: $.GetRoute<typeof current["~layout"]>;`,
 			`export declare const getRouter: $.GetRouter<import("${routerModule}").Router>;`,
 			`export declare const useRouter: $.GetRouter<import("${routerModule}").Router>;`,
+			`export { getPageRoute, usePageRoute } from "${this.pkg}";`,
+			`export { getLayoutRoute, useLayoutRoute } from "${this.pkg}";`,
+			`export { getRouter, useRouter } from "${this.pkg}";`,
 		);
 
 		const codeStr = codes.join('\n') + '\n';
