@@ -30,8 +30,7 @@ test('writeRoute should write root route', () => {
 	);
 
 	expect(code).toMatchInlineSnapshot(`
-		"export * from "@jeffydc/ruta-vue";
-		import type * as $ from "@jeffydc/ruta-vue";
+		"import type * as $ from "@jeffydc/ruta-vue";
 		import { route as current } from "./../../../src/routes/+route.config.ts";
 		export declare const getPageRoute: $.GetRoute<typeof current["~page"]>;
 		export declare const usePageRoute: $.GetRoute<typeof current["~page"]>;
@@ -39,6 +38,9 @@ test('writeRoute should write root route', () => {
 		export declare const useLayoutRoute: $.GetRoute<typeof current["~layout"]>;
 		export declare const getRouter: $.GetRouter<import("./../../../src/router.ts").Router>;
 		export declare const useRouter: $.GetRouter<import("./../../../src/router.ts").Router>;
+		export { getPageRoute, usePageRoute } from "@jeffydc/ruta-vue";
+		export { getLayoutRoute, useLayoutRoute } from "@jeffydc/ruta-vue";
+		export { getRouter, useRouter } from "@jeffydc/ruta-vue";
 		"
 	`);
 });
@@ -54,8 +56,7 @@ test('writeRoute should write export parent route', () => {
 	);
 
 	expect(code).toMatchInlineSnapshot(`
-		"export * from "@jeffydc/ruta-svelte";
-		import type * as $ from "@jeffydc/ruta-svelte";
+		"import type * as $ from "@jeffydc/ruta-svelte";
 		import { route as current } from "./../../../../src/routes/no-layout/+route.config.ts";
 		export { route as parentRoute } from "./../../../../src/routes/+route.config.ts";
 		export declare const getPageRoute: $.GetRoute<typeof current["~page"]>;
@@ -64,6 +65,9 @@ test('writeRoute should write export parent route', () => {
 		export declare const useLayoutRoute: $.GetRoute<typeof current["~layout"]>;
 		export declare const getRouter: $.GetRouter<import("./../../../../src/router.ts").Router>;
 		export declare const useRouter: $.GetRouter<import("./../../../../src/router.ts").Router>;
+		export { getPageRoute, usePageRoute } from "@jeffydc/ruta-svelte";
+		export { getLayoutRoute, useLayoutRoute } from "@jeffydc/ruta-svelte";
+		export { getRouter, useRouter } from "@jeffydc/ruta-svelte";
 		"
 	`);
 });
