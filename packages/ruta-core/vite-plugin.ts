@@ -484,7 +484,9 @@ export class VPR {
 	/** @internal */
 	isRouteConfigFile(file: string): boolean {
 		file = path.basename(file);
-		return file === `+route.config.ts` || file === `+route.config.js`;
+		return (
+			file.startsWith(routePrefix) && (file.endsWith('config.ts') || file.endsWith('config.js'))
+		);
 	}
 
 	/** @internal */
