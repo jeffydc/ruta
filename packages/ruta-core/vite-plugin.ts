@@ -67,6 +67,7 @@ export function ruta(rawOptions: VitePluginRutaOptions): Plugin {
 							replacement: '$1',
 							customResolver(source, importer) {
 								if (!importer) return;
+								if (source.endsWith('.js')) source = source.slice(0, -3);
 								if (!source.endsWith('.ts')) source += '.ts';
 								return path.resolve(vpr.normalizeGenDir(path.dirname(importer)), source);
 							},
