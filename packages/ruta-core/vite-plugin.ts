@@ -1,7 +1,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import * as tty from 'node:tty';
 
-import { select, text, isCancel, multiselect, intro, outro, cancel, confirm } from '@clack/prompts';
+import * as clack from '@clack/prompts';
 import { normalizePath } from 'vite';
 import type { Plugin } from 'vite';
 
@@ -151,108 +152,23 @@ export function ruta(rawOptions: VitePluginRutaOptions): Plugin {
 				customShortcuts: [
 					{
 						key: 'ru add',
-						description: `generate a route (${PLUGIN_NAME})`,
+						description: `generate route(s) (${PLUGIN_NAME})`,
 						async action() {
-							intro(PLUGIN_NAME);
-
-							const parentDir = await select({
-								message: 'Select the directory to create a route inside:',
-								options: Array.from(vpr.routeDirMap.keys()).map((dir) => ({
-									label: path.relative(vpr.root, dir),
-									value: dir,
-								})),
-							});
-
-							if (isCancel(parentDir)) {
-								cancel('Operation cancelled');
-								server.printUrls();
-								return;
-							}
-
-							let routeDir = await text({
-								message: 'Enter the name of the route directory:',
-							});
-
-							if (isCancel(routeDir)) {
-								cancel('Operation cancelled');
-								server.printUrls();
-								return;
-							}
-
-							routeDir = path.resolve(parentDir, routeDir);
-							if (fs.existsSync(routeDir)) {
-								cancel('Directory already exists');
-								server.printUrls();
-								return;
-							}
-
-							const routeName = path.basename(routeDir);
-							const files = [
-								`${routeDir}/${routePrefix}${routeName}-config.ts`,
-								`${routeDir}/${routePrefix}${routeName}-layout.${vpr.framework}`,
-								`${routeDir}/${routePrefix}${routeName}-page.${vpr.framework}`,
-							] as const;
-
-							vpr.writeIfChanged(
-								files[0],
-								`
-			import { defineLayoutRoute, definePageRoute } from "./+route.gen.ts";
-
-			export const layout = defineLayoutRoute({
-			});
-
-			export const page = definePageRoute({
-			});
-			`.trimStart(),
-							);
-							vpr.writeIfChanged(files[1], '');
-							vpr.writeIfChanged(files[2], '');
-
-							outro(`${path.relative(vpr.root, routeDir)} created with:`);
-							console.log(files);
+							await shortcutAddAction(vpr);
 						},
 					},
 					{
 						key: 'ru ls',
 						description: `list all routes (${PLUGIN_NAME})`,
 						action() {
-							intro(PLUGIN_NAME);
-							console.log(Array.from(vpr.routeDirMap.keys()));
+							clack.note(Array.from(vpr.routeDirMap.keys()).join('\n'), 'All routes:');
 						},
 					},
 					{
 						key: 'ru rm',
 						description: `remove route(s) (${PLUGIN_NAME})`,
 						async action() {
-							intro(PLUGIN_NAME);
-
-							const dirs = await multiselect({
-								message: 'Select the routes to remove:',
-								options: Array.from(vpr.routeDirMap.keys()).map((dir) => ({
-									label: path.relative(vpr.root, dir),
-									value: dir,
-								})),
-							});
-
-							if (isCancel(dirs)) {
-								cancel('Operation cancelled');
-								return;
-							}
-
-							const shouldProceed = await confirm({
-								message: 'Are you sure you want to remove these routes?',
-							});
-
-							if (isCancel(shouldProceed) || !shouldProceed) {
-								cancel('Operation cancelled');
-								return;
-							}
-
-							dirs.forEach((dir) => {
-								fs.rmSync(dir, { recursive: true });
-							});
-							outro('Removed below routes:');
-							console.log(dirs);
+							await shortcutRemoveAction(vpr);
 						},
 					},
 				],
@@ -288,6 +204,10 @@ export class VPR {
 		this.routeLayoutFile = `layout.${options.framework}`;
 		this.routePageFile = `page.${options.framework}`;
 		this.root = process.cwd();
+	}
+
+	get root() {
+		return this.#root;
 	}
 
 	/** @internal */
@@ -477,11 +397,16 @@ export class VPR {
 	/** @internal */
 	writeIfChanged(file: string, code: string) {
 		if (code !== this.#contents.get(file)) {
-			file = path.resolve(file);
-			this.#contents.set(file, code);
-			mkdirp(path.dirname(file));
-			fs.writeFileSync(file, code);
+			this.write(file, code);
 		}
+	}
+
+	/** @internal */
+	write(file: string, code: string) {
+		file = path.resolve(file);
+		this.#contents.set(file, code);
+		mkdirp(path.dirname(file));
+		fs.writeFileSync(file, code);
 	}
 
 	/** @internal */
@@ -532,4 +457,118 @@ function debounce(fn: (...args: any[]) => void) {
 
 function relImportPath(from: string, to: string) {
 	return './' + normalizePath(path.relative(from, to));
+}
+
+async function shortcutAddAction(vpr: VPR) {
+	const { input, output, cleanup } = createClackIO();
+
+	let parentDir = await clack.autocomplete({
+		input,
+		output,
+		message: 'Select the directory to create a route inside:',
+		options: Array.from(vpr.routeDirMap.keys()).map((dir) => ({
+			label: path.relative(vpr.root, dir),
+			value: dir,
+		})),
+	});
+
+	if (clack.isCancel(parentDir)) {
+		clack.cancel('Operation cancelled');
+		cleanup();
+		return;
+	}
+
+	let routeDirs = await clack.text({
+		input,
+		output,
+		message: 'Enter the path of the route directory:',
+		placeholder: './user/repo/settings',
+	});
+
+	if (clack.isCancel(routeDirs)) {
+		clack.cancel('Operation cancelled');
+		cleanup();
+		return;
+	}
+
+	for (const routeDir of routeDirs.split(path.sep)) {
+		parentDir = path.resolve(parentDir, routeDir);
+		if (fs.existsSync(parentDir)) {
+			clack.log.warn(`Directory ${parentDir} already exists`);
+			continue;
+		}
+		const routeName = path.basename(parentDir);
+		const files = [
+			`${parentDir}/${routePrefix}${routeName}-config.ts`,
+			`${parentDir}/${routePrefix}${routeName}-error.${vpr.framework}`,
+			`${parentDir}/${routePrefix}${routeName}-layout.${vpr.framework}`,
+			`${parentDir}/${routePrefix}${routeName}-page.${vpr.framework}`,
+		] as const;
+
+		vpr.write(files[0], `export const route = createRouteBuilder().layout().page();`);
+		vpr.write(files[1], '');
+		vpr.write(files[2], '');
+		vpr.write(files[3], '');
+
+		clack.log.success(`Created ${path.relative(vpr.root, parentDir)} with:`);
+		clack.box(files.join('\n'));
+	}
+
+	cleanup();
+}
+
+async function shortcutRemoveAction(vpr: VPR) {
+	const { input, output, cleanup } = createClackIO();
+
+	const dirs = await clack.autocompleteMultiselect({
+		input,
+		output,
+		message: 'Select the routes to remove:',
+		options: Array.from(vpr.routeDirMap.keys()).map((dir) => ({
+			label: path.relative(vpr.root, dir),
+			value: dir,
+		})),
+	});
+
+	if (clack.isCancel(dirs)) {
+		clack.cancel('Operation cancelled');
+		cleanup();
+		return;
+	}
+
+	clack.log.warn('Route directories to be removed:');
+	clack.box(dirs.join('\n'));
+
+	const shouldProceed = await clack.confirm({
+		input,
+		output,
+		message: 'Are you sure you want to remove these routes?',
+	});
+
+	if (clack.isCancel(shouldProceed) || !shouldProceed) {
+		clack.cancel('Operation cancelled');
+		cleanup();
+		return;
+	}
+
+	dirs.forEach((dir) => {
+		fs.rmSync(dir, { force: true, recursive: true });
+	});
+	clack.log.success('Removed below route directories:');
+	clack.box(dirs.join('\n'));
+	cleanup();
+}
+
+function createClackIO() {
+	const inputFd = fs.openSync('/dev/tty', 'r');
+	const outputFd = fs.openSync('/dev/tty', 'w');
+	const input = new tty.ReadStream(inputFd);
+	const output = new tty.WriteStream(outputFd);
+
+	const cleanup = () => {
+		input.destroy();
+		output.destroy();
+	};
+
+	return { input, output, cleanup };
 }
