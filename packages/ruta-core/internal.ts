@@ -23,10 +23,15 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	#ok = false;
 	#base: string;
 	#context: TRoutes['/']['~context'];
-	#ctrller = new AbortController();
-	#capturedError: any | null = null;
-	#capturedIndex = -1;
 	#rootNode: Node = { seg: '/' };
+
+	/** Only used in SSR. */
+	#ctrller!: AbortController;
+	/**
+	 * - On browser: `NavigateEvent.signal`
+	 * - On server: `this.#ctrller.signal`
+	 */
+	#signal!: AbortSignal;
 
 	#from = createEmptyRoute();
 	#to = createEmptyRoute();
@@ -68,11 +73,14 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		}
 
 		const href = this.href(to);
-		if (BROWSER && window.navigation) {
-			await window.navigation.navigate(href).finished;
+		if (BROWSER) {
+			if (window.navigation) {
+				const { finished } = window.navigation.navigate(href);
+				await finished;
+			}
 		} //
 		else {
-			await this.#matchRoute(href);
+			await this.#handleNavigate(href);
 		}
 
 		if (!this.#ok) {
@@ -81,7 +89,8 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	};
 
 	/**
-	 * Build a link string. Useful for building links.
+	 * Build a href link string. Bind the result directly to the `href`
+	 * of `<a>` tags. It already handles base path.
 	 */
 	href = <TPath extends keyof TRoutes & string>(
 		to: StaticPaths<TPath> | ToOptions<TPath, TRoutes>,
@@ -96,7 +105,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 			for (const [key, paramValue] of Object.entries(params)) {
 				// @ts-expect-error Type 'string' is not assignable to type 'TPath'.
 				path = path
-					// try replacing with modifiers first
+					// Try replacing with modifiers first
 					.replace(`:${key}*`, paramValue as string)
 					.replace(`:${key}+`, paramValue as string)
 					.replace(`:${key}?`, paramValue as string)
@@ -129,15 +138,22 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		window.navigation.addEventListener('navigate', (e) => {
 			const { canIntercept, downloadRequest, hashChange, destination } = e;
 
-			if (!canIntercept || downloadRequest !== null || hashChange) return;
+			if (!canIntercept || downloadRequest || hashChange) return;
 
+			this.#signal = e.signal;
 			e.intercept({
-				handler: async () => await this.#matchRoute(this.href(destination.url)),
+				// @ts-expect-error type is not updated yet
+				precommitHandler: async (controller) => {
+					const to = await this.#handleNavigate(destination.url);
+					if (to) {
+						controller.redirect(to);
+					}
+				},
 			});
 		});
 
 		const events = ['pointerover', 'touchstart', 'pointerdown'] as const;
-		let timeout: number;
+		let handle: number;
 		for (const event of events) {
 			addEventListener(event, (e) => {
 				const anchor = (e.target as HTMLElement).closest('a');
@@ -154,8 +170,8 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 					return;
 				}
 
-				cancelIdleCallback(timeout);
-				timeout = requestIdleCallback(() => this.#matchRoute(this.href(anchor.href), true), {
+				cancelIdleCallback(handle);
+				handle = requestIdleCallback(() => this.#handleNavigate(anchor.href, true), {
 					timeout: 100,
 				});
 			});
@@ -170,39 +186,78 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		hooks.push(hook);
 		return () => {
 			const idx = hooks.indexOf(hook);
-			if (idx !== -1) hooks.splice(idx, 1);
-		};
-	}
-
-	async #runHooks(hooks: Array<NavigationHook<TRoutes>>) {
-		// call navigate hooks if available
-		if (hooks.length) {
-			const hookArgs = this.#makeHookArgs();
-			await Promise.all(
-				hooks.map((hook) =>
-					// wrap in async IIFE to catch all sync/async errors
-					(async () => hook(hookArgs))(),
-				),
-			);
-		}
-	}
-
-	#makeHookArgs() {
-		return {
-			to: this.#to,
-			from: this.#from,
-			context: this.#context,
-			controller: this.#ctrller,
+			if (idx > -1) hooks.splice(idx, 1);
 		};
 	}
 
 	/**
-	 * Do route matching. This also calls the respective navigation hooks.
+	 * Run navigation hooks or load functions (a variant of hook).
 	 *
-	 * @param href `/base/pathname?search#hash`
+	 * @param hooks before hooks or after hooks or load functions
+	 * @param isHook whether running hook fn
+	 * @throws it throws on Ruta specific known errors
+	 */
+	async #runHooks(hooks: Array<NavigationHook<TRoutes>> | AnyMatchedRoute['loads'], isHook = true) {
+		if (!hooks.length) return;
+		if (!isHook && this.#to.error) return;
+
+		const hookArgs = {
+			to: this.#to,
+			from: this.#from,
+			context: this.#context,
+			signal: this.#signal,
+		};
+		await Promise.all(
+			hooks.map((hook, i) => {
+				return hook
+					? Promise.try(hook, hookArgs).catch((err) => {
+							throw [err, i];
+						})
+					: null;
+			}),
+		).catch(([err, i]) => {
+			this.#to.error = rethrowIfKnownError(err);
+			this.#to.errorIndex = isHook ? 0 : i;
+		});
+	}
+
+	/**
+	 * Universal navigation entrypoint.
+	 *
+	 * @param href href string
+	 * @param redirect Environment specific redirect function
+	 * @param preload Whether to do preload
+	 */
+	async #handleNavigate(href: string, preload?: boolean): Promise<string | undefined> {
+		if (!BROWSER) {
+			this.#ctrller = new AbortController();
+			this.#signal = this.#ctrller.signal;
+		}
+		href = this.href(href);
+		try {
+			await this.#matchRoute(href, preload);
+			return href;
+		} catch (err) {
+			if (!preload && err instanceof Redirect) {
+				return await this.#handleNavigate(err.to);
+			}
+			// TODO: unhandled error
+		}
+	}
+
+	/**
+	 * Do route matching. This does
+	 * - lookup route
+	 * - call navigation hooks
+	 * - resolve components & run loads
+	 * - run params & search functions
+	 *
+	 * @param href return value of `this.href`
+	 * @param preload whether to preload
+	 * @throws it throws on Ruta specific known errors
 	 */
 	async #matchRoute(href: string, preload = false) {
-		// exit if navigating to the same URL
+		// Exit if navigating to the same URL
 		if (this.#from.href === href) {
 			return;
 		}
@@ -210,16 +265,11 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		const hrefWithoutBase = resolvePath(trimBase(href, this.#base));
 		const url = new URL(hrefWithoutBase, FAKE_ORIGIN);
 
-		this.#ctrller = new AbortController();
 		this.#to = createEmptyRoute();
-		this.#capturedError = null;
-		this.#capturedIndex = -1;
 
 		this.#to.href = href;
-		// call before navigation hooks
-		await this.#runHooks(this.#hooksBefore);
 
-		// do route matching
+		// Do route matching
 		const route = this.#lookup(url.pathname);
 		if (!route) {
 			DEV && warn(`unmatched url ${href}.`);
@@ -233,22 +283,23 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 			try {
 				Object.assign(this.#to.search, fn?.(url.searchParams));
 			} catch (error) {
-				this.#capturedError = error;
-				this.#capturedIndex = i;
+				this.#to.error = rethrowIfKnownError(error);
+				this.#to.errorIndex = i;
 				break;
 			}
 		}
 
-		// resolve components and run load functions parallel
-		await Promise.all([this.#resolveComps(route), this.#runLoads(route)]);
+		// Call before navigation hooks
+		await this.#runHooks(this.#hooksBefore);
 
-		this.#to.error = this.#capturedError;
-		this.#to.errorIndex = this.#capturedIndex;
-		// only update `from` route if not preload since it is not navigation
+		// Resolve components and run load functions parallel
+		await Promise.all([this.#resolveComps(route), this.#runHooks(route.loads, false)]);
+
+		// Only update `from` route if not preload since it is not navigation
 		if (!preload) {
-			// call after navigation hooks
+			// Call after navigation hooks
 			await this.#runHooks(this.#hooksAfter);
-			// store old route
+			// Store old route
 			this.#from = {
 				...this.#to,
 				comps: [...this.#to.comps],
@@ -262,29 +313,6 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		this.#to.comps = route.comps = await Promise.all(route.comps);
 	}
 
-	async #runLoads(route: AnyMatchedRoute) {
-		const { loads } = route;
-		if (!loads.length) return;
-		if (this.#capturedError) return;
-
-		const hookArgs = this.#makeHookArgs();
-		// run load functions parallel
-		// Promise.allSettled is used to capture the error
-		const loadResults = await Promise.allSettled(
-			// wrap in async IIFE to catch all sync/async errors
-			loads.map((load) => (async () => load?.(hookArgs))()) || [],
-		);
-
-		for (const [i, result] of loadResults.entries()) {
-			// Capture the first error and index to render an error page.
-			if (result.status === 'rejected') {
-				this.#capturedIndex = i;
-				this.#capturedError = result.reason;
-				break;
-			}
-		}
-	}
-
 	/**
 	 * Insert a node to a Trie.
 	 * @param absPath full pathname.
@@ -294,7 +322,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		let node = this.#rootNode;
 		const segments = absPath.split('/');
 		for (const segment of segments) {
-			// ignore empty string
+			// Ignore empty string
 			if (!segment) continue;
 			const isDynamic = segment.includes(':');
 
@@ -332,25 +360,25 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		const search = [];
 
 		let index = 0;
-		let found = true; // true first to add root node data
+		let found = true; // True first to add root node data
 		while (true) {
-			// root route is always matched, so need to add its data
-			// first, and continue the lookup.
+			// Root route is always matched, so need to add its data
+			// First, and continue the lookup.
 			if (found) {
 				found = false;
 				assert(node.data, `node.data should be defined, please file an issue.`);
-				// load function of +layout component of this route
+				// Load function of +layout component of this route
 				loads.push(node.data.loads[0]);
-				// search function of +layout component of this route
+				// Search function of +layout component of this route
 				search.push(node.data.search[0]);
 				// +error, +layout components of this route
 				this.#queueComps(node.data, comps, 0, 2);
 			}
-			// over length
+			// Over length
 			if (index >= segments.length) break;
 
 			const segment = segments[index++];
-			// ignore empty string
+			// Ignore empty string
 			if (!segment) continue;
 
 			const staticNode = node.static?.get(segment);
@@ -371,9 +399,9 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		}
 
 		assert(node.data, `node.data should be defined, please file an issue.`);
-		// load function of +page component of this route
+		// Load function of +page component of this route
 		loads.push(node.data.loads[1]);
-		// parseSearch function of +page component of this route
+		// ParseSearch function of +page component of this route
 		search.push(node.data.search[1]);
 		// +error, +page components of this route
 		this.#queueComps(node.data, comps, 2, 4);
@@ -402,19 +430,10 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		// prettier-ignore
 		const { pathname: { groups } } = match;
 
-		try {
-			const filtered = Object.fromEntries(
-				Object.entries(groups).filter((v): v is [string, string] => !!v[1]),
-			);
-			Object.assign(
-				params,
-				dynNode.data.parseParams ? dynNode.data.parseParams(filtered) : filtered,
-			);
-		} catch (e) {
-			this.#capturedError = e;
-			// `parseParams` function can throw error to not match the params
-			return null;
-		}
+		const filtered = Object.fromEntries(
+			Object.entries(groups).filter((v): v is [string, string] => !!v[1]),
+		);
+		Object.assign(params, dynNode.data.parseParams ? dynNode.data.parseParams(filtered) : filtered);
 
 		return dynNode;
 	}
@@ -422,30 +441,39 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	#queueComps(route: AnyRouteConfig, comps: AnyMatchedRoute['comps'], from: number, to: number) {
 		for (let i = from; i < to; i++) {
 			const comp = route.comps[i];
-			// to note a function like () => import(comp) since Svelte
-			// components are simply functions
+			// To note a function like () => import(comp) since Svelte
+			// Components are simply functions
 			// @ts-expect-error __ruta is added in node insertion to Trie
 			if (comp && comp.__ruta && typeof comp === 'function') {
 				// Without typecasting here, typechecking in
-				// ruta-vue, ruta-svelte fails.
+				// Ruta-vue, ruta-svelte fails.
 				const promise = (comp as RouteComponentLazy)()
 					.then((c) => {
-						// replace with the resolved component
+						// Replace with the resolved component
 						return (route.comps[i] = c.default);
 					})
 					.catch((e: any) => {
 						warn(`failed to load component: ${e}`);
 						throw e;
 					});
-				// push promise to load the resolved component later
+				// Push promise to load the resolved component later
 				comps.push(promise);
 			} //
 			else {
-				// component is already resolved or null placeholder
+				// Component is already resolved or null placeholder
 				comps.push(comp as RouteComponent);
 			}
 		}
 	}
+}
+
+// TODO: make it type safe
+export function redirect(to: string) {
+	throw new Redirect(to);
+}
+
+class Redirect {
+	constructor(public to: any) {}
 }
 
 /**
@@ -507,8 +535,12 @@ export function createEmptyRoute(): RouteMut<string, {}, {}> {
 		params: {},
 		path: '',
 		search: {},
-		error: null,
 	};
+}
+
+function rethrowIfKnownError(err: unknown) {
+	if (err instanceof Redirect) throw err;
+	return err;
 }
 
 /**
@@ -539,7 +571,7 @@ export function trimBase(path: string, base: string) {
  * @internal
  * Use the provided `base` or get from the `href` attribute of `<base>` tag.
  */
-export function normalizeBase(base: string) {
+function normalizeBase(base: string) {
 	if (BROWSER && base !== '' && !base) {
 		const href = document.querySelector('base')?.getAttribute('href');
 		base = href ? new URL(href).pathname : base;
@@ -858,7 +890,7 @@ type NavigationHookArgs<
 	to: TTo;
 	from: TFrom;
 	context: TContext;
-	controller: AbortController;
+	signal: AbortSignal;
 };
 
 /**
