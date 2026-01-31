@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useLayoutRoute } from './+route.gen.ts';
+import { RouteTyped } from './+route.gen.ts';
 
-const route = useLayoutRoute();
+const route = RouteTyped.useLayoutRoute();
 </script>
 
 <template>

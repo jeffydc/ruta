@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useLayoutRoute, useRouter } from './+route.gen.ts';
+import { RouteTyped } from './+route.gen.ts';
 
-const router = useRouter();
-const route = useLayoutRoute();
+const router = RouteTyped.useRouter();
+const route = RouteTyped.useLayoutRoute();
 
 route.path === '/';
 

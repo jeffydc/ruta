@@ -7,7 +7,7 @@ import pkg from './deno.json' with { type: 'json' };
 /**
  * Options of vite-plugin-ruta.
  */
-export type VitePluginRutaOptions = Omit<_VitePluginRutaOptions, 'framework'>;
+export type VitePluginRutaOptions = Omit<_VitePluginRutaOptions, 'framework' | 'pkg'>;
 
 /**
  * The vite-plugin-ruta.

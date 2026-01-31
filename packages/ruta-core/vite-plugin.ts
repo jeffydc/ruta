@@ -64,8 +64,9 @@ export function ruta(rawOptions: VitePluginRutaOptions): Plugin {
 		name: PLUGIN_NAME,
 		enforce: 'pre',
 
-		config(config) {
+		config(config, { command }) {
 			vpr.root = config.root || process.cwd();
+			vpr.isBuild = command === 'build';
 
 			return {
 				resolve: {
@@ -200,6 +201,7 @@ export class VPR {
 	routeErrorFile = '+error.js';
 	routeLayoutFile = '+layout.js';
 	routePageFile = '+page.js';
+	isBuild = false;
 
 	/** @internal */
 	constructor(options: Required<VitePluginRutaOptions>) {
@@ -322,7 +324,7 @@ export class VPR {
 		const routerModule = relImportPath(genDir, this.routerModule);
 
 		const codes = [
-			`import type * as $ from "${this.pkg}";`,
+			`import * as $ from "${this.pkg}";`,
 			`import { route as current } from "${current}";`,
 		];
 
@@ -330,17 +332,17 @@ export class VPR {
 			codes.push(`export { route as parentRoute } from "${parent}";`);
 		}
 
-		codes.push(
-			`export declare const getPageRoute: $.GetRoute<typeof current["~page"]>;`,
-			`export declare const usePageRoute: $.GetRoute<typeof current["~page"]>;`,
-			`export declare const getLayoutRoute: $.GetRoute<typeof current["~layout"]>;`,
-			`export declare const useLayoutRoute: $.GetRoute<typeof current["~layout"]>;`,
-			`export declare const getRouter: $.GetRouter<import("${routerModule}").Router>;`,
-			`export declare const useRouter: $.GetRouter<import("${routerModule}").Router>;`,
-			`export { getPageRoute, usePageRoute } from "${this.pkg}";`,
-			`export { getLayoutRoute, useLayoutRoute } from "${this.pkg}";`,
-			`export { getRouter, useRouter } from "${this.pkg}";`,
-		);
+		if (this.isBuild) {
+			codes.push(`export { $ as RouteTyped };`);
+		} //
+		else {
+			codes.push(
+				`type Router = import("${routerModule}").Router;`,
+				`type Layout = typeof current["~layout"];`,
+				`type Page = typeof current["~page"];`,
+				`export const RouteTyped = $.getTypedAPI<Router, Layout, Page>();`,
+			);
+		}
 
 		const codeStr = codes.join('\n') + '\n';
 		if (write) {

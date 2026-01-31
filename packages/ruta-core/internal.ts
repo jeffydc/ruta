@@ -39,6 +39,12 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	#hooksBefore: Array<NavigationHook<TRoutes>> = [];
 	#hooksAfter: Array<NavigationHook<TRoutes>> = [];
 
+	/**
+	 * @internal
+	 * **TYPE ONLY.**
+	 */
+	'~routes': TRoutes;
+
 	constructor(options: RutaOptions<TRoutes>) {
 		this.#base = normalizeBase(options.base || '/');
 		this.#context = options.context || {};
@@ -467,13 +473,30 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	}
 }
 
-// TODO: make it type safe
-export function redirect(to: string) {
-	throw new Redirect(to);
+/**
+ * @internal
+ * A helper function that re-exports the APIs which require type
+ * augmentation during development.
+ *
+ * In production, vite-plugin-ruta simply re-exports all APIs to reduce
+ * bundle size.
+ */
+export function getTypedAPI<TRouter extends Ruta, _TLayout, _TPage>() {
+	if (!DEV) {
+		assert(false, `it should not codegen getTypedAPI in production build, please file an issue.`);
+	}
+	return {
+		redirect: redirect as RedirectFn<TRouter['~routes']>,
+	};
 }
 
-class Redirect {
-	constructor(public to: any) {}
+/** Do route redirect. */
+export const redirect: RedirectFn<any> = (to) => {
+	throw new Redirect(to);
+};
+
+class Redirect<TPath extends string, TRoutes extends Record<string, AnyRouteConfig>> {
+	constructor(public to: StaticPaths<TPath> | ToOptions<TPath, TRoutes>) {}
 }
 
 /**
@@ -900,6 +923,10 @@ type NavigationHookArgs<
 type LoadFn<TContext, TTo extends Route> = (args: LoadFnArgs<TContext, TTo>) => MaybePromise<void>;
 
 type LoadFnArgs<TContext, TTo extends Route> = Omit<NavigationHookArgs<{}, TContext, TTo>, 'from'>;
+
+type RedirectFn<TRoutes extends Record<string, AnyRouteConfig>> = (
+	to: Parameters<Ruta<TRoutes>['href']>[0],
+) => void;
 
 /**
  * @public

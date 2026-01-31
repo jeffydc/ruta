@@ -31,17 +31,12 @@ test('writeRoute should write root route', () => {
 	);
 
 	expect(code).toMatchInlineSnapshot(`
-		"import type * as $ from "@jeffydc/ruta-core";
+		"import * as $ from "@jeffydc/ruta-core";
 		import { route as current } from "./../../../src/routes/+route.config.ts";
-		export declare const getPageRoute: $.GetRoute<typeof current["~page"]>;
-		export declare const usePageRoute: $.GetRoute<typeof current["~page"]>;
-		export declare const getLayoutRoute: $.GetRoute<typeof current["~layout"]>;
-		export declare const useLayoutRoute: $.GetRoute<typeof current["~layout"]>;
-		export declare const getRouter: $.GetRouter<import("./../../../src/router.ts").Router>;
-		export declare const useRouter: $.GetRouter<import("./../../../src/router.ts").Router>;
-		export { getPageRoute, usePageRoute } from "@jeffydc/ruta-core";
-		export { getLayoutRoute, useLayoutRoute } from "@jeffydc/ruta-core";
-		export { getRouter, useRouter } from "@jeffydc/ruta-core";
+		type Router = import("./../../../src/router.ts").Router;
+		type Layout = typeof current["~layout"];
+		type Page = typeof current["~page"];
+		export const RouteTyped = $.getTypedAPI<Router, Layout, Page>();
 		"
 	`);
 });
@@ -57,18 +52,32 @@ test('writeRoute should write export parent route', () => {
 	);
 
 	expect(code).toMatchInlineSnapshot(`
-		"import type * as $ from "@jeffydc/ruta-core";
+		"import * as $ from "@jeffydc/ruta-core";
 		import { route as current } from "./../../../../src/routes/no-layout/+route.config.ts";
 		export { route as parentRoute } from "./../../../../src/routes/+route.config.ts";
-		export declare const getPageRoute: $.GetRoute<typeof current["~page"]>;
-		export declare const usePageRoute: $.GetRoute<typeof current["~page"]>;
-		export declare const getLayoutRoute: $.GetRoute<typeof current["~layout"]>;
-		export declare const useLayoutRoute: $.GetRoute<typeof current["~layout"]>;
-		export declare const getRouter: $.GetRouter<import("./../../../../src/router.ts").Router>;
-		export declare const useRouter: $.GetRouter<import("./../../../../src/router.ts").Router>;
-		export { getPageRoute, usePageRoute } from "@jeffydc/ruta-core";
-		export { getLayoutRoute, useLayoutRoute } from "@jeffydc/ruta-core";
-		export { getRouter, useRouter } from "@jeffydc/ruta-core";
+		type Router = import("./../../../../src/router.ts").Router;
+		type Layout = typeof current["~layout"];
+		type Page = typeof current["~page"];
+		export const RouteTyped = $.getTypedAPI<Router, Layout, Page>();
+		"
+	`);
+});
+
+test('writeRoute should re-export APIs in build', () => {
+	const vpr = new VPR(makeOptions());
+	vpr.isBuild = true;
+	const code = vpr.writeRoute(
+		{
+			dir: vpr.routeDir,
+			configFile: vpr.routeDir + '/+route.config.ts',
+		},
+		false,
+	);
+
+	expect(code).toMatchInlineSnapshot(`
+		"import * as $ from "@jeffydc/ruta-core";
+		import { route as current } from "./../../../src/routes/+route.config.ts";
+		export { $ as RouteTyped };
 		"
 	`);
 });

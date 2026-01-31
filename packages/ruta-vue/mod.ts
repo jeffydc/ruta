@@ -1,5 +1,5 @@
 import type { Route, RutaOptions } from '@jeffydc/ruta-core';
-import { Ruta, createEmptyRoute } from '@jeffydc/ruta-core';
+import { Ruta, createEmptyRoute, getTypedAPI as _getTypedAPI } from '@jeffydc/ruta-core';
 import type { App, DefineComponent, VNode } from 'vue';
 import { defineComponent, h, inject, markRaw, readonly, shallowReactive } from 'vue';
 
@@ -74,6 +74,27 @@ const getRouter: GetRouter = () => inject(ROUTER_SYMBOL)!;
  * Composable to access the current route in Vue components.
  */
 const getRoute: GetRoute = () => inject(ROUTE_SYMBOL)!;
+
+/**
+ * @internal
+ * A helper function that re-exports the APIs which require type
+ * augmentation during development.
+ *
+ * In production, vite-plugin-ruta simply re-exports all APIs to reduce
+ * bundle size.
+ */
+export function getTypedAPI<
+	TRouter extends RutaVue,
+	TLayoutRoute extends Route,
+	TPageRoute extends Route,
+>() {
+	return {
+		..._getTypedAPI<TRouter, TLayoutRoute, TPageRoute>(),
+		useRouter: getRouter as GetRouter<TRouter>,
+		usePageRoute: getRoute as GetRoute<TPageRoute>,
+		useLayoutRoute: getRoute as GetRoute<TLayoutRoute>,
+	};
+}
 
 const RethrowError = defineComponent({
 	name: 'RethrowError',
