@@ -88,12 +88,11 @@ export function ruta(rawOptions: VitePluginRutaOptions): Plugin {
 		},
 
 		buildStart() {
-			if (!fs.existsSync(vpr.routeDir)) return;
 			vpr.init();
 		},
 
 		configureServer(server) {
-			const debounceCodegenAll = debounce(vpr.writeAll);
+			const debounceWriteAll = debounce(vpr.writeAll);
 			server.watcher.on('add', (file) => {
 				if (!file.startsWith(vpr.routeDir)) return;
 
@@ -114,7 +113,7 @@ export function ruta(rawOptions: VitePluginRutaOptions): Plugin {
 					routeDirData.pageFile = file;
 				}
 				vpr.routeDirMap.set(dir, routeDirData);
-				debounceCodegenAll();
+				debounceWriteAll();
 			});
 
 			server.watcher.on('unlink', (file) => {
@@ -134,7 +133,7 @@ export function ruta(rawOptions: VitePluginRutaOptions): Plugin {
 					else if (vpr.isRoutePageFile(file)) {
 						routeDirData.pageFile = undefined;
 					}
-					debounceCodegenAll();
+					debounceWriteAll();
 				}
 			});
 
@@ -146,7 +145,7 @@ export function ruta(rawOptions: VitePluginRutaOptions): Plugin {
 						recursive: true,
 					});
 				});
-				debounceCodegenAll();
+				debounceWriteAll();
 			});
 			server.watcher.on('unlinkDir', (dir) => {
 				if (vpr.routeDirMap.delete(dir)) {
@@ -159,21 +158,21 @@ export function ruta(rawOptions: VitePluginRutaOptions): Plugin {
 			server.bindCLIShortcuts({
 				customShortcuts: [
 					{
-						key: 'ru add',
+						key: 'ruta+',
 						description: `generate route(s) (${PLUGIN_NAME})`,
 						async action() {
 							await shortcutAddAction(vpr);
 						},
 					},
 					{
-						key: 'ru ls',
+						key: 'ruta',
 						description: `list all routes (${PLUGIN_NAME})`,
 						action() {
 							clack.note(Array.from(vpr.routeDirMap.keys()).join('\n'), 'All routes:');
 						},
 					},
 					{
-						key: 'ru rm',
+						key: 'ruta-',
 						description: `remove route(s) (${PLUGIN_NAME})`,
 						async action() {
 							await shortcutRemoveAction(vpr);
@@ -232,6 +231,7 @@ export class VPR {
 
 	/** @internal */
 	init() {
+		mkdirp(this.routeDir);
 		fs.rmSync(this.dotRuta, { force: true, recursive: true });
 		this.writeDefaults();
 		this.visitRouteDir(this.routeDir);
@@ -449,7 +449,7 @@ export class VPR {
 function mkdirp(dir: string) {
 	if (fs.existsSync(dir)) {
 		if (fs.statSync(dir).isDirectory()) return;
-		throw new Error(`cannot create directory ${dir}, it already exists`);
+		throw new Error(`cannot create directory ${dir}, it already exists.`);
 	}
 	fs.mkdirSync(dir, { recursive: true });
 }
@@ -566,6 +566,7 @@ async function shortcutRemoveAction(vpr: VPR) {
 	});
 	clack.log.success('Removed below route directories:');
 	clack.box(dirs.join('\n'));
+
 	cleanup();
 }
 
