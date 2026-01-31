@@ -39,6 +39,8 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	#hooksBefore: Array<NavigationHook<TRoutes>> = [];
 	#hooksAfter: Array<NavigationHook<TRoutes>> = [];
 
+	#onError;
+
 	/**
 	 * @internal
 	 * **TYPE ONLY.**
@@ -48,6 +50,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	constructor(options: RutaOptions<TRoutes>) {
 		this.#base = normalizeBase(options.base || '/');
 		this.#context = options.context || {};
+		this.#onError = options.onError || ((e) => console.error(e));
 
 		for (const [absPath, route] of Object.entries(options.routes)) {
 			assert(absPath === route.path, `${absPath} should be ${route.path}, please file an issue.`);
@@ -82,7 +85,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		if (BROWSER) {
 			if (window.navigation) {
 				const { finished } = window.navigation.navigate(href);
-				await finished;
+				await finished.catch((e) => this.#onError(e));
 			}
 		} //
 		else {
@@ -151,9 +154,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 				// @ts-expect-error type is not updated yet
 				precommitHandler: async (controller) => {
 					const to = await this.#handleNavigate(destination.url);
-					if (to) {
-						controller.redirect(to);
-					}
+					controller.redirect(to);
 				},
 			});
 		});
@@ -224,6 +225,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		).catch(([err, i]) => {
 			this.#to.error = rethrowIfKnownError(err);
 			this.#to.errorIndex = isHook ? 0 : i;
+			this.#onError(this.#to.error);
 		});
 	}
 
@@ -234,7 +236,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	 * @param redirect Environment specific redirect function
 	 * @param preload Whether to do preload
 	 */
-	async #handleNavigate(href: string, preload?: boolean): Promise<string | undefined> {
+	async #handleNavigate(href: string, preload?: boolean): Promise<string> {
 		if (!BROWSER) {
 			this.#ctrller = new AbortController();
 			this.#signal = this.#ctrller.signal;
@@ -247,7 +249,8 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 			if (!preload && err instanceof Redirect) {
 				return await this.#handleNavigate(err.to);
 			}
-			// TODO: unhandled error
+			this.#onError(err as any);
+			throw err;
 		}
 	}
 
@@ -291,6 +294,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 			} catch (error) {
 				this.#to.error = rethrowIfKnownError(error);
 				this.#to.errorIndex = i;
+				this.#onError(this.#to.error);
 				break;
 			}
 		}
@@ -299,7 +303,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		await this.#runHooks(this.#hooksBefore);
 
 		// Resolve components and run load functions parallel
-		await Promise.all([this.#resolveComps(route), this.#runHooks(route.loads, false)]);
+		await Promise.all([this.#resolveComps(route.comps), this.#runHooks(route.loads, false)]);
 
 		// Only update `from` route if not preload since it is not navigation
 		if (!preload) {
@@ -315,8 +319,24 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		}
 	}
 
-	async #resolveComps(route: AnyMatchedRoute) {
-		this.#to.comps = route.comps = await Promise.all(route.comps);
+	async #resolveComps(comps: AnyMatchedRoute['comps']) {
+		assert(
+			this.#to.comps.length === 0,
+			`there should not be previous components, please file an issue.`,
+		);
+
+		const results = await Promise.allSettled(comps);
+		for (const [i, result] of results.entries()) {
+			if (result.status === 'fulfilled') {
+				this.#to.comps.push(result.value);
+			} //
+			else if (result.status === 'rejected') {
+				this.#to.error = result.reason;
+				this.#to.errorIndex = i;
+				this.#onError(result.reason);
+				break;
+			}
+		}
 	}
 
 	/**
@@ -439,7 +459,16 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		const filtered = Object.fromEntries(
 			Object.entries(groups).filter((v): v is [string, string] => !!v[1]),
 		);
-		Object.assign(params, dynNode.data.parseParams ? dynNode.data.parseParams(filtered) : filtered);
+		try {
+			Object.assign(
+				params,
+				dynNode.data.parseParams ? dynNode.data.parseParams(filtered) : filtered,
+			);
+		} catch (err) {
+			Object.assign(params, filtered);
+			this.#to.error = rethrowIfKnownError(err);
+			this.#onError(this.#to.error);
+		}
 
 		return dynNode;
 	}
@@ -563,7 +592,7 @@ export function createEmptyRoute(): RouteMut<string, {}, {}> {
 
 function rethrowIfKnownError(err: unknown) {
 	if (err instanceof Redirect) throw err;
-	return err;
+	return err instanceof Error ? err : new Error(`${err}`);
 }
 
 /**
@@ -656,6 +685,11 @@ type RutaOptionsShared<TRoutes> = {
 	 * The (code generated) routes of the application.
 	 */
 	routes: TRoutes;
+
+	/**
+	 * The function that is called when an error occurs during navigation.
+	 */
+	onError?: (err: Error) => void;
 };
 
 /**
@@ -702,7 +736,7 @@ type RouteMut<TPath extends string, TParams, TSearch> = {
 	/**
 	 * The errors of the route.
 	 */
-	error?: unknown;
+	error?: Error;
 
 	/**
 	 * The index of the route level that the error occurred.
