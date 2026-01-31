@@ -53,8 +53,6 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		this.#onError = options.onError || ((e) => console.error(e));
 
 		for (const [absPath, route] of Object.entries(options.routes)) {
-			assert(absPath === route.path, `${absPath} should be ${route.path}, please file an issue.`);
-			assert(route.comps.length === 4, `route.comps should have 4 entries, please file an issue.`);
 			this.#insert(absPath, route);
 		}
 
@@ -82,6 +80,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		}
 
 		const href = this.href(to);
+		// This needs to check with 2 ifs, otherwise bundlers fail to treeshake.
 		if (BROWSER) {
 			if (window.navigation) {
 				const { finished } = window.navigation.navigate(href);
@@ -206,7 +205,10 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	 */
 	async #runHooks(hooks: Array<NavigationHook<TRoutes>> | AnyMatchedRoute['loads'], isHook = true) {
 		if (!hooks.length) return;
+		// Navigation hooks always run regardless of existing errors, but other
+		// hooks (i.e. load hook) do not need to.
 		if (!isHook && this.#to.error) return;
+		assert(this.#signal, `AbortSignal should be defined, please file an issue.`);
 
 		const hookArgs = {
 			to: this.#to,
@@ -223,7 +225,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 					: null;
 			}),
 		).catch(([err, i]) => {
-			this.#to.error = rethrowIfKnownError(err);
+			this.#to.error = throwIfKnownError(err);
 			this.#to.errorIndex = isHook ? 0 : i;
 			this.#onError(this.#to.error);
 		});
@@ -246,8 +248,8 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 			await this.#matchRoute(href, preload);
 			return href;
 		} catch (err) {
-			if (!preload && err instanceof Redirect) {
-				return await this.#handleNavigate(err.to);
+			if (err instanceof Redirect) {
+				return await this.#handleNavigate(err.to, preload);
 			}
 			this.#onError(err as any);
 			throw err;
@@ -276,34 +278,32 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 
 		this.#to = createEmptyRoute();
 
-		this.#to.href = href;
-
-		// Do route matching
 		const route = this.#lookup(url.pathname);
 		if (!route) {
 			DEV && warn(`unmatched url ${href}.`);
 			return;
 		}
 
-		const { params, path, search } = route;
+		const { params, path, search, comps, loads } = route;
+		this.#to.href = href;
 		this.#to.path = path;
 		this.#to.params = params;
+
 		for (const [i, fn] of search.entries()) {
 			try {
 				Object.assign(this.#to.search, fn?.(url.searchParams));
-			} catch (error) {
-				this.#to.error = rethrowIfKnownError(error);
+			} catch (err) {
+				this.#to.error = throwIfKnownError(err);
 				this.#to.errorIndex = i;
 				this.#onError(this.#to.error);
 				break;
 			}
 		}
 
-		// Call before navigation hooks
+		// TODO: does route preloading run navigation hooks? Check other routers.
 		await this.#runHooks(this.#hooksBefore);
 
-		// Resolve components and run load functions parallel
-		await Promise.all([this.#resolveComps(route.comps), this.#runHooks(route.loads, false)]);
+		await Promise.all([this.#resolveComps(comps), this.#runHooks(loads, false)]);
 
 		// Only update `from` route if not preload since it is not navigation
 		if (!preload) {
@@ -316,14 +316,18 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 				params: { ...this.#to.params },
 				search: { ...this.#to.search },
 			};
+
+			if (this.#to.error || this.#to.errorIndex != null)
+				assert(
+					this.#to.error && this.#to.errorIndex != null && this.#to.errorIndex > -1,
+					`to.error should be defined, to.errorIndex should be > -1, please file an issue.`,
+				);
 		}
 	}
 
 	async #resolveComps(comps: AnyMatchedRoute['comps']) {
-		assert(
-			this.#to.comps.length === 0,
-			`there should not be previous components, please file an issue.`,
-		);
+		assert(comps.length, `comps should not be empty, please file an issue.`);
+		assert(this.#to.comps.length === 0, `to.comps should be empty, please file an issue.`);
 
 		const results = await Promise.allSettled(comps);
 		for (const [i, result] of results.entries()) {
@@ -331,9 +335,9 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 				this.#to.comps.push(result.value);
 			} //
 			else if (result.status === 'rejected') {
-				this.#to.error = result.reason;
-				this.#to.errorIndex = i;
-				this.#onError(result.reason);
+				this.#to.error = throwIfKnownError(result.reason);
+				this.#to.errorIndex = Math.floor(i / 2);
+				this.#onError(this.#to.error);
 				break;
 			}
 		}
@@ -342,13 +346,22 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	/**
 	 * Insert a node to a Trie.
 	 * @param absPath full pathname.
-	 * @param data metadata to insert.
+	 * @param route route data to insert.
 	 */
-	#insert(absPath: string, data: AnyRouteConfig) {
+	#insert(absPath: string, route: AnyRouteConfig) {
+		assert(absPath === route.path, `${absPath} should be ${route.path}, please file an issue.`);
+		assert(route.comps.length === 4, `route.comps should have 4 entries, please file an issue.`);
+		assert(route.loads.length === 2, `route.loads should have 2 entries, please file an issue.`);
+		assert(route.search.length === 2, `route.search should have 2 entries, please file an issue.`);
+		if (route.path.includes(':'))
+			assert(
+				route.pattern,
+				`route.pattern should be defined for dynamic routes, please file an issue.`,
+			);
+
 		let node = this.#rootNode;
 		const segments = absPath.split('/');
 		for (const segment of segments) {
-			// Ignore empty string
 			if (!segment) continue;
 			const isDynamic = segment.includes(':');
 
@@ -364,11 +377,12 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 				node = node.static.get(segment)!;
 			}
 		}
-		// @ts-expect-error adding private property to +layout
-		data.comps[1].__ruta = 1;
-		// @ts-expect-error adding private property to +page
-		data.comps[3].__ruta = 1;
-		node.data = data;
+
+		// @ts-expect-error adding private property to +layout component.
+		route.comps[1].__ruta = 1;
+		// @ts-expect-error adding private property to +page component.
+		route.comps[3].__ruta = 1;
+		node.data = route;
 	}
 
 	/**
@@ -400,11 +414,9 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 				// +error, +layout components of this route
 				this.#queueComps(node.data, comps, 0, 2);
 			}
-			// Over length
 			if (index >= segments.length) break;
 
 			const segment = segments[index++];
-			// Ignore empty string
 			if (!segment) continue;
 
 			const staticNode = node.static?.get(segment);
@@ -414,7 +426,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 				continue;
 			}
 
-			const dynNode = this.#lookupDynamic(node, segment, params);
+			const dynNode = this.#lookupDynamic(node, segment, params, index - 1);
 			if (dynNode) {
 				node = dynNode;
 				found = true;
@@ -431,6 +443,8 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		search.push(node.data.search[1]);
 		// +error, +page components of this route
 		this.#queueComps(node.data, comps, 2, 4);
+		assert(comps.length, `comps should not be empty, please file an issue.`);
+
 		return {
 			path: node.data.path,
 			comps,
@@ -440,17 +454,15 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		};
 	}
 
-	#lookupDynamic(node: Node, segment: string, params: AnyRecord) {
+	#lookupDynamic(node: Node, segment: string, params: AnyRecord, index: number) {
 		const dynNode = node.dyn;
 		if (!dynNode) return null;
 
-		assert(dynNode.data, `dynamicNode.data should be defined, please file an issue.`);
-		assert(
-			dynNode.data.pattern,
-			`dynamicNode.data.pattern should be defined, please file an issue.`,
-		);
+		assert(dynNode.data, `dynNode.data should be defined, please file an issue.`);
+		const { pattern, parseParams } = dynNode.data;
+		assert(pattern, `dynNode.data.pattern should be defined, please file an issue.`);
 
-		const match = dynNode.data.pattern.exec({ pathname: '/' + segment });
+		const match = pattern.exec({ pathname: '/' + segment });
 		if (!match) return null;
 
 		// prettier-ignore
@@ -460,13 +472,11 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 			Object.entries(groups).filter((v): v is [string, string] => !!v[1]),
 		);
 		try {
-			Object.assign(
-				params,
-				dynNode.data.parseParams ? dynNode.data.parseParams(filtered) : filtered,
-			);
+			Object.assign(params, parseParams?.(filtered) || filtered);
 		} catch (err) {
 			Object.assign(params, filtered);
-			this.#to.error = rethrowIfKnownError(err);
+			this.#to.error = throwIfKnownError(err);
+			this.#to.errorIndex = index;
 			this.#onError(this.#to.error);
 		}
 
@@ -474,6 +484,12 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	}
 
 	#queueComps(route: AnyRouteConfig, comps: AnyMatchedRoute['comps'], from: number, to: number) {
+		assert(
+			from < route.comps.length && to <= route.comps.length,
+			`from and to should be within route.comps.length, please file an issue.`,
+		);
+		const oldCompCount = comps.length;
+
 		for (let i = from; i < to; i++) {
 			const comp = route.comps[i];
 			// To note a function like () => import(comp) since Svelte
@@ -499,6 +515,11 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 				comps.push(comp as RouteComponent);
 			}
 		}
+
+		assert(
+			comps.length - oldCompCount === to - from,
+			`comps should queue ${to - from} components, please file an issue.`,
+		);
 	}
 }
 
@@ -512,7 +533,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
  */
 export function getTypedAPI<TRouter extends Ruta, _TLayout, _TPage>() {
 	if (!DEV) {
-		assert(false, `it should not codegen getTypedAPI in production build, please file an issue.`);
+		assert(false, `getTypedAPI should not be in production build, please file an issue.`);
 	}
 	return {
 		redirect: redirect as RedirectFn<TRouter['~routes']>,
@@ -546,9 +567,13 @@ export function createRouteBuilder<
 	layout: LayoutBuilder<TParentRouteConfig, TPath>;
 	page: PageBuilder<TParentRouteConfig, TPath>;
 } {
-	if (path !== '/') {
-		assert(!path.includes('/'), `path cannot include "/".`);
+	if (parent == null) {
+		assert(path === '/', `path should be "/" if parent route is null.`);
 	}
+	if (path !== '/') {
+		assert(!path.includes('/'), `path should not include "/".`);
+	}
+
 	const route: Omit<AnyRouteConfig, 'comps' | '~layout' | '~page'> = {
 		path: resolvePath(parent?.path ?? '', path) as any,
 		loads: [], // [layout load, page load]
@@ -590,9 +615,13 @@ export function createEmptyRoute(): RouteMut<string, {}, {}> {
 	};
 }
 
-function rethrowIfKnownError(err: unknown) {
+/**
+ * Rethrow `err` if `err` is known errors to handle known errors at outer code
+ * paths. Otherwise, return the given `err`.
+ */
+function throwIfKnownError(err: unknown) {
 	if (err instanceof Redirect) throw err;
-	return err instanceof Error ? err : new Error(`${err}`);
+	return Error.isError(err) ? err : new Error(`${err}`);
 }
 
 /**
@@ -645,11 +674,11 @@ export function warn(msg: string) {
  */
 function assert(condition: any, msg?: string | (() => string)): asserts condition {
 	if (condition) return;
-
 	if (!DEV) {
-		throw new Error(`[ruta error]: assertion failed`);
+		throw new Error(`ruta assertion failed`);
 	}
-	throw new Error(`[ruta error]: ${typeof msg === 'function' ? msg() : msg || 'assertion failed'}`);
+	msg = (typeof msg === 'function' ? msg() : msg) || '';
+	throw new Error(`ruta assertion failed: ${msg}`);
 }
 
 ///////////////////////////////////////////// TYPES ////////////////////////////////////////////////

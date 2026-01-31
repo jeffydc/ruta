@@ -5,7 +5,7 @@ import { Ruta, trimBase, resolvePath, createRouteBuilder } from './internal.ts';
 test(`${createRouteBuilder.name} path cannot include "/"`, () => {
 	const root = createRouteBuilder(null, '/').page();
 	expect(() => createRouteBuilder(root, '/child').page).toThrowErrorMatchingInlineSnapshot(
-		`[Error: [ruta error]: path cannot include "/".]`,
+		`[Error: ruta assertion failed: path should not include "/".]`,
 	);
 });
 
