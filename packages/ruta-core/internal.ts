@@ -308,6 +308,8 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		// Only update `from` route if not preload since it is not navigation
 		if (!preload) {
 			// Call after navigation hooks
+			// TODO: if there is error in after hooks, UI won't be updated since
+			// framework UI update is registered in after hooks, but URL is updated.
 			await this.#runHooks(this.#hooksAfter);
 			// Store old route
 			this.#from = {
@@ -335,6 +337,8 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 				this.#to.comps.push(result.value);
 			} //
 			else if (result.status === 'rejected') {
+				// Push an empty component slot to render error
+				this.#to.comps.push(null);
 				this.#to.error = throwIfKnownError(result.reason);
 				this.#to.errorIndex = Math.floor(i / 2);
 				this.#onError(this.#to.error);
@@ -353,11 +357,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		assert(route.comps.length === 4, `route.comps should have 4 entries, please file an issue.`);
 		assert(route.loads.length === 2, `route.loads should have 2 entries, please file an issue.`);
 		assert(route.search.length === 2, `route.search should have 2 entries, please file an issue.`);
-		if (route.path.includes(':'))
-			assert(
-				route.pattern,
-				`route.pattern should be defined for dynamic routes, please file an issue.`,
-			);
+		assert(route.comps[3], `${absPath} at least should have +page component.`);
 
 		let node = this.#rootNode;
 		const segments = absPath.split('/');
@@ -378,10 +378,11 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 			}
 		}
 
+		const [, layout, , page] = route.comps;
 		// @ts-expect-error adding private property to +layout component.
-		route.comps[1].__ruta = 1;
+		layout && (layout.__ruta = 1);
 		// @ts-expect-error adding private property to +page component.
-		route.comps[3].__ruta = 1;
+		page.__ruta = 1;
 		node.data = route;
 	}
 
@@ -576,16 +577,16 @@ export function createRouteBuilder<
 
 	const route: Omit<AnyRouteConfig, 'comps' | '~layout' | '~page'> = {
 		path: resolvePath(parent?.path ?? '', path) as any,
-		loads: [], // [layout load, page load]
-		search: [], // [layout search, page search]
+		loads: [null, null], // [layout load, page load]
+		search: [null, null], // [layout search, page search]
 		pattern: path.includes(':') ? new URLPattern({ pathname: '/' + path }) : null,
 	};
 
 	let hasLayout = false;
 	const layout: LayoutBuilder<TParentRouteConfig, TPath> = (r) => {
 		hasLayout = true;
-		route.loads.push(r?.load);
-		route.search.push(r?.parseSearch);
+		route.loads[0] = r?.load;
+		route.search[0] = r?.parseSearch;
 		route.parseParams = r?.parseParams;
 		return { page } as any;
 	};
@@ -594,8 +595,8 @@ export function createRouteBuilder<
 		if (!hasLayout) {
 			route.parseParams = r?.parseParams;
 		}
-		route.loads.push(r?.load);
-		route.search.push(r?.parseSearch);
+		route.loads[1] = r?.load;
+		route.search[1] = r?.parseSearch;
 		return route as any;
 	};
 
@@ -672,12 +673,11 @@ export function warn(msg: string) {
  * @__NO_SIDE_EFFECTS__
  * @internal
  */
-function assert(condition: any, msg?: string | (() => string)): asserts condition {
+function assert(condition: any, msg: string = ''): asserts condition {
 	if (condition) return;
 	if (!DEV) {
 		throw new Error(`ruta assertion failed`);
 	}
-	msg = (typeof msg === 'function' ? msg() : msg) || '';
 	throw new Error(`ruta assertion failed: ${msg}`);
 }
 
@@ -963,7 +963,7 @@ type NavigationHook<TRoutes extends Record<string, AnyRouteConfig>> = (
  * @internal
  * Arguments for navigation hook function.
  */
-type NavigationHookArgs<
+export type NavigationHookArgs<
 	TRoutes extends Record<string, AnyRouteConfig>,
 	TContext extends TRoutes['/']['~context'] = TRoutes['/']['~context'],
 	TTo extends Route = TRoutes[keyof TRoutes] extends never
@@ -1035,7 +1035,7 @@ type RouteComponentLazy = () => Promise<{ default: InferComponent }>;
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
-type AnyRecord = Record<string, any>;
+export type AnyRecord = Record<string, any>;
 
 type MaybePromise<T> = Promise<T> | T;
 
