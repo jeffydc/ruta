@@ -532,13 +532,13 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
  * In production, vite-plugin-ruta simply re-exports all APIs to reduce
  * bundle size.
  */
-export function getTypedAPI<TRouter extends Ruta, _TLayout, _TPage>() {
+export function getTypedAPI<TRouter extends Ruta, _TLayout, _TPage>(): {
+	redirect: RedirectFn<TRouter['~routes']>;
+} {
 	if (!DEV) {
 		assert(false, `getTypedAPI should not be in production build, please file an issue.`);
 	}
-	return {
-		redirect: redirect as RedirectFn<TRouter['~routes']>,
-	};
+	return { redirect };
 }
 
 /** Do route redirect. */

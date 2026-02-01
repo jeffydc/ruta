@@ -87,9 +87,13 @@ export function getTypedAPI<
 	TRouter extends RutaVue,
 	TLayoutRoute extends Route,
 	TPageRoute extends Route,
->() {
+>(): ReturnType<typeof _getTypedAPI<TRouter, TLayoutRoute, TLayoutRoute>> & {
+	useRouter: GetRouter<TRouter>;
+	usePageRoute: GetRoute<TPageRoute>;
+	useLayoutRoute: GetRoute<TLayoutRoute>;
+} {
 	return {
-		..._getTypedAPI<TRouter, TLayoutRoute, TPageRoute>(),
+		..._getTypedAPI(),
 		useRouter: getRouter as GetRouter<TRouter>,
 		usePageRoute: getRoute as GetRoute<TPageRoute>,
 		useLayoutRoute: getRoute as GetRoute<TLayoutRoute>,
