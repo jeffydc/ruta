@@ -94,10 +94,10 @@ export function getTypedAPI<
 } {
 	return {
 		..._getTypedAPI(),
-		useRouter: getRouter as GetRouter<TRouter>,
-		usePageRoute: getRoute as GetRoute<TPageRoute>,
-		useLayoutRoute: getRoute as GetRoute<TLayoutRoute>,
-	};
+		useRouter: getRouter,
+		usePageRoute: getRoute,
+		useLayoutRoute: getRoute,
+	} as any;
 }
 
 const RethrowError = defineComponent({

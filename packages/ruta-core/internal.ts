@@ -845,15 +845,19 @@ type RouteOptions<TParentRouteConfig, TPath extends string, TParams, TSearch> = 
 };
 
 type MergePath<TParentRouteConfig, TPath extends string> = ResolvePath<
-	[TParentRouteConfig extends { path: infer TPath extends string } ? TPath : '/', TPath]
+	[TParentRouteConfig extends { path: infer ParentPath extends string } ? ParentPath : '/', TPath]
 >;
 
 type MergeParams<TParentRouteConfig, TParams> = Prettify<
-	(TParentRouteConfig extends { '~layout': { params: infer TParams } } ? TParams : {}) & TParams
+	(TParentRouteConfig extends { '~layout': { params: infer ParentParams } } ? ParentParams : {}) &
+		TParams
 >;
 
 type MergeSearch<TParentRouteConfig, TSearch> = Prettify<
-	(TParentRouteConfig extends { '~layout': { search: infer TSearch } } ? TSearch : {}) & TSearch
+	(TParentRouteConfig extends { '~layout': { search: infer ParentSearch } }
+		? Omit<ParentSearch, keyof TSearch>
+		: {}) &
+		TSearch
 >;
 
 type InferContext<TRouteConfig> = TRouteConfig extends {
