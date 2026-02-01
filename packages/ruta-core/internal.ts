@@ -613,6 +613,8 @@ export function createEmptyRoute(): RouteMut<string, {}, {}> {
 		params: {},
 		path: '',
 		search: {},
+		error: null,
+		errorIndex: null,
 	};
 }
 
@@ -765,12 +767,12 @@ type RouteMut<TPath extends string, TParams, TSearch> = {
 	/**
 	 * The errors of the route.
 	 */
-	error?: Error;
+	error?: Error | null;
 
 	/**
 	 * The index of the route level that the error occurred.
 	 */
-	errorIndex?: number;
+	errorIndex?: number | null;
 };
 
 /**
