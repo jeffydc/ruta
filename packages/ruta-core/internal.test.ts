@@ -207,12 +207,14 @@ class RutaTest<TRoutes extends AnyRecord> extends Ruta<TRoutes> {
 
 suite(Ruta, () => {
 	test(`should return original context`, () => {
-		const root = createRouteBuilder(null, '/').layout().page();
+		const root = createRouteBuilder(null, '/', () => ({ satisfies: true }))
+			.layout()
+			.page();
 		root.comps = [null, rootLayout, null, rootPage];
 		const routes = {
 			[root.path]: root,
 		};
-		const ruta = new RutaTest({ routes, context: { satisfies: true } });
+		const ruta = new RutaTest({ routes });
 
 		expect(ruta.context).toStrictEqual({ satisfies: true });
 	});

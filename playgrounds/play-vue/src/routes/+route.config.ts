@@ -1,7 +1,9 @@
 import { createRouteBuilder } from '@jeffydc/ruta-vue';
-import { type QueryClient } from '@tanstack/vue-query';
+import { QueryClient } from '@tanstack/vue-query';
 
-export const route = createRouteBuilder(null, '/')
+export const route = createRouteBuilder(null, '/', () => ({
+	qc: new QueryClient(),
+}))
 	.layout({
 		parseSearch(search) {
 			return { page: +search.get('page')! };

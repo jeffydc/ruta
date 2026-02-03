@@ -52,7 +52,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 
 	constructor(options: RutaOptions<TRoutes>) {
 		this.#base = normalizeBase(options.base || '/');
-		this.#context = options.context || {};
+		this.#context = (options.routes['/']?.contextFn?.() || {}) as TRoutes['/']['~context'];
 		this.#onError = options.onError || ((e) => console.error(e));
 
 		for (const [absPath, route] of Object.entries(options.routes)) {
@@ -553,6 +553,8 @@ class Redirect<TPath extends string, TRoutes extends Record<string, AnyRouteConf
  *
  * @param parent Parent route or null if creating root route.
  * @param path Path segment of this route.
+ * @param contextFn Context factory function of this route
+ * (only supported root route for now).
  * @returns An object with `layout`, `page` functions to create layout
  * route or page route respectively.
  *
@@ -561,12 +563,14 @@ class Redirect<TPath extends string, TRoutes extends Record<string, AnyRouteConf
 export function createRouteBuilder<
 	TParentRouteConfig extends AnyRouteConfig | null,
 	TPath extends TParentRouteConfig extends AnyRouteConfig ? string : '/' = '/',
+	TContext extends AnyRecord = {},
 >(
 	parent: TParentRouteConfig,
 	path: TPath,
+	contextFn?: ContextFn<TContext>,
 ): {
-	layout: LayoutBuilder<TParentRouteConfig, TPath>;
-	page: PageBuilder<TParentRouteConfig, TPath>;
+	layout: LayoutBuilder<TParentRouteConfig, TPath, TContext>;
+	page: PageBuilder<TParentRouteConfig, TPath, TContext>;
 } {
 	if (parent == null) {
 		assert(path === '/', `path should be "/" if parent route is null.`);
@@ -575,15 +579,16 @@ export function createRouteBuilder<
 		assert(!path.includes('/'), `path should not include "/".`);
 	}
 
-	const route: Omit<AnyRouteConfig, 'comps' | '~layout' | '~page'> = {
+	const route: Omit<AnyRouteConfig, 'comps' | '~context' | '~layout' | '~page'> = {
 		path: resolvePath(parent?.path ?? '', path) as any,
 		loads: [null, null], // [layout load, page load]
 		search: [null, null], // [layout search, page search]
 		pattern: path.includes(':') ? new URLPattern({ pathname: '/' + path }) : null,
+		contextFn,
 	};
 
 	let hasLayout = false;
-	const layout: LayoutBuilder<TParentRouteConfig, TPath> = (r) => {
+	const layout: LayoutBuilder<TParentRouteConfig, TPath, TContext> = (r) => {
 		hasLayout = true;
 		route.loads[0] = r?.load;
 		route.search[0] = r?.parseSearch;
@@ -591,7 +596,7 @@ export function createRouteBuilder<
 		return { page } as any;
 	};
 
-	const page: PageBuilder<TParentRouteConfig, TPath> = (r) => {
+	const page: PageBuilder<TParentRouteConfig, TPath, TContext> = (r) => {
 		if (!hasLayout) {
 			route.parseParams = r?.parseParams;
 		}
@@ -702,22 +707,7 @@ function assert(condition: any, msg: string = ''): asserts condition {
  */
 export type RutaOptions<
 	TRoutes extends Record<string, AnyRouteConfig> = Record<string, AnyRouteConfig>,
-	_Context extends TRoutes['/']['~context'] = TRoutes['/']['~context'],
-> = keyof _Context extends never
-	? RutaOptionsShared<TRoutes> & {
-			/**
-			 * The context object that will be passed to all routes.
-			 */
-			context?: _Context;
-		}
-	: RutaOptionsShared<TRoutes> & {
-			/**
-			 * The context object that will be passed to all routes.
-			 */
-			context: _Context;
-		};
-
-type RutaOptionsShared<TRoutes> = {
+> = {
 	/**
 	 * The base path of the application. Like <base> tag.
 	 */
@@ -794,47 +784,50 @@ type MakeRouteMut<TParentRouteConfig, TPath extends string, TParams, TSearch> = 
 	MergeSearch<TParentRouteConfig, TSearch>
 >;
 
-type LayoutBuilder<TParentRouteConfig, TPath extends string> = <
+type LayoutBuilder<TParentRouteConfig, TPath extends string, TContext> = <
 	TParams = ParseParams<TPath>,
 	TSearch = {},
 	TLayoutRouteConfig = RouteConfig<
 		TParentRouteConfig,
 		TPath,
+		TContext,
 		MakeRouteMut<TParentRouteConfig, TPath, TParams, TSearch>,
 		never
 	>,
 >(
-	r?: RouteOptions<TParentRouteConfig, TPath, TParams, TSearch>,
+	r?: RouteOptions<TParentRouteConfig, TPath, TContext, TParams, TSearch>,
 ) => {
 	page: <TPageSearch extends AnyRecord = {}>(
-		r?: Omit<RouteOptions<TLayoutRouteConfig, '', {}, TPageSearch>, 'parseParams'>,
+		r?: Omit<RouteOptions<TLayoutRouteConfig, '', TContext, {}, TPageSearch>, 'parseParams'>,
 	) => Prettify<
 		RouteConfig<
 			TLayoutRouteConfig,
 			'',
+			TContext,
 			InferLayoutRoute<TLayoutRouteConfig>,
 			MakeRouteMut<TLayoutRouteConfig, '', {}, TPageSearch>
 		>
 	>;
 };
 
-type PageBuilder<TParentRouteConfig, TPath extends string> = <
+type PageBuilder<TParentRouteConfig, TPath extends string, TContext> = <
 	TParams = ParseParams<TPath>,
 	TSearch = {},
 >(
-	r?: RouteOptions<TParentRouteConfig, TPath, TParams, TSearch>,
+	r?: RouteOptions<TParentRouteConfig, TPath, TContext, TParams, TSearch>,
 ) => Prettify<
 	RouteConfig<
 		TParentRouteConfig,
 		TPath,
+		TContext,
 		InferLayoutRoute<TParentRouteConfig>,
 		MakeRouteMut<TParentRouteConfig, TPath, TParams, TSearch>
 	>
 >;
 
-type RouteOptions<TParentRouteConfig, TPath extends string, TParams, TSearch> = {
+type RouteOptions<TParentRouteConfig, TPath extends string, TContext, TParams, TSearch> = {
 	load?: LoadFn<
-		InferContext<TParentRouteConfig>,
+		MergeContext<TParentRouteConfig, TContext>,
 		MakeRouteMut<TParentRouteConfig, TPath, TParams, TSearch>
 	>;
 	parseParams?: ParseParamsFn<TPath, TParams>;
@@ -857,11 +850,12 @@ type MergeSearch<TParentRouteConfig, TSearch> = Prettify<
 		TSearch
 >;
 
-type InferContext<TRouteConfig> = TRouteConfig extends {
-	'~context': infer TContext extends AnyRecord;
-}
-	? TContext
-	: {};
+type MergeContext<TParentRouteConfig, TContext> = Prettify<
+	(TParentRouteConfig extends { '~context': infer ParentContext extends AnyRecord }
+		? Omit<ParentContext, keyof TContext>
+		: {}) &
+		TContext
+>;
 
 type InferLayoutRoute<TRouteConfig> = TRouteConfig extends {
 	'~layout': infer TLayoutRoute extends Route;
@@ -869,7 +863,7 @@ type InferLayoutRoute<TRouteConfig> = TRouteConfig extends {
 	? TLayoutRoute
 	: never;
 
-type AnyRouteConfig = RouteConfig<any, any, any, any>;
+type AnyRouteConfig = RouteConfig<any, any, any, any, any>;
 
 type AnyMatchedRoute = Pick<AnyRouteConfig, 'path' | 'loads' | 'search'> & {
 	params: AnyRecord;
@@ -881,7 +875,7 @@ type AnyMatchedRoute = Pick<AnyRouteConfig, 'path' | 'loads' | 'search'> & {
  *
  * @internal
  */
-type RouteConfig<TParentRouteConfig, TPath extends string, TLayoutRoute, TPageRoute> = {
+type RouteConfig<TParentRouteConfig, TPath extends string, TContext, TLayoutRoute, TPageRoute> = {
 	/**
 	 * Resolved absolute pathname.
 	 *
@@ -915,7 +909,10 @@ type RouteConfig<TParentRouteConfig, TPath extends string, TLayoutRoute, TPageRo
 	 *
 	 * @internal
 	 */
-	parseParams?: RouteOptions<TParentRouteConfig, TPath, any, any>['parseParams'] | undefined | null;
+	parseParams?:
+		| RouteOptions<TParentRouteConfig, TPath, any, any, any>['parseParams']
+		| undefined
+		| null;
 
 	/**
 	 * The parseSearch functions (layout + page) of this route.
@@ -925,11 +922,18 @@ type RouteConfig<TParentRouteConfig, TPath extends string, TLayoutRoute, TPageRo
 	search: Array<ParseSearchFn<any> | undefined | null>;
 
 	/**
+	 * The context factory function of this route.
+	 *
+	 * @internal
+	 */
+	contextFn?: ContextFn<TContext>;
+
+	/**
 	 * **TYPE ONLY**. The context of this route.
 	 *
 	 * @internal
 	 */
-	'~context'?: InferContext<TParentRouteConfig>;
+	'~context': MergeContext<TParentRouteConfig, TContext>;
 
 	/**
 	 * **TYPE ONLY**. The layout route of this route.
@@ -945,6 +949,8 @@ type RouteConfig<TParentRouteConfig, TPath extends string, TLayoutRoute, TPageRo
 	 */
 	'~page': TPageRoute;
 };
+
+type ContextFn<TContext> = () => TContext;
 
 type ParseParamsFn<TPath extends string, TParams> = (
 	params: Readonly<ParseParams<TPath>>,
