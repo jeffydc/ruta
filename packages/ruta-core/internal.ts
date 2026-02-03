@@ -163,15 +163,11 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		for (const event of events) {
 			addEventListener(event, (e) => {
 				const anchor = (e.target as HTMLElement).closest('a');
-				const rutaPreload =
-					anchor?.dataset.rutaPreload || document.documentElement.dataset.rutaPreload;
 				if (
 					!anchor ||
 					anchor.hasAttribute('download') ||
 					anchor.getAttribute('rel')?.includes('external') ||
-					anchor.getAttribute('target')?.includes('_blank') ||
-					((event === events[1] || event === events[2]) && rutaPreload !== 'tap') ||
-					(event === events[0] && rutaPreload !== 'hover')
+					anchor.getAttribute('target')?.includes('_blank')
 				) {
 					return;
 				}
@@ -300,18 +296,14 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 			}
 		}
 
-		// TODO: does route preloading run navigation hooks? Check other routers.
 		await this.#runHooks(this.#hooksBefore);
 
 		await Promise.all([this.#resolveComps(comps), this.#runHooks(loads, false)]);
 
-		// Only update `from` route if not preload since it is not navigation
 		if (!preload) {
-			// Call after navigation hooks
 			// TODO: if there is error in after hooks, UI won't be updated since
 			// framework UI update is registered in after hooks, but URL is updated.
 			await this.#runHooks(this.#hooksAfter);
-			// Store old route
 			this.#from = {
 				...this.#to,
 				comps: [...this.#to.comps],
