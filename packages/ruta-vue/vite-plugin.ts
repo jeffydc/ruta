@@ -1,5 +1,6 @@
 /**
  * The `vite-plugin-ruta`.
+ * @module
  */
 
 import { ruta as _ruta } from '@jeffydc/ruta-core/vite';

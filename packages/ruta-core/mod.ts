@@ -1,5 +1,6 @@
 /**
  * ruta-core entrypoint.
+ * @module
  */
 
 /// <reference types="@types/dom-navigation" />

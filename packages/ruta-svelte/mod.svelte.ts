@@ -1,5 +1,6 @@
 /**
  * ruta-svelte entrypoint.
+ * @module
  */
 
 import type { Route, RutaOptions } from '@jeffydc/ruta-core';
@@ -21,14 +22,14 @@ export {
 /**
  * Symbol for setting/getting the router instance from context.
  *
- * @private
+ * @internal
  */
 const ROUTER_SYMBOL = Symbol();
 
 /**
  * Symbol for setting/getting the current route from context.
  *
- * @private
+ * @internal
  */
 const ROUTE_SYMBOL = Symbol();
 
@@ -67,28 +68,28 @@ class RutaSvelte<TRoutes extends Record<string, any> = Record<string, any>> exte
 /**
  * Type signature for the `getRouter` function.
  *
- * @private
+ * @internal
  */
 type GetRouter<T extends RutaSvelte = RutaSvelte> = () => T;
 
 /**
  * Type signature for the `getRoute` function.
  *
- * @private
+ * @internal
  */
 type GetRoute<T extends Route = Route> = () => T;
 
 /**
  * Get the router instance from Svelte context.
  *
- * @private
+ * @internal
  */
 const getRouter: GetRouter = () => getContext(ROUTER_SYMBOL);
 
 /**
  * Get the current route from Svelte context.
  *
- * @private
+ * @internal
  */
 const getRoute: GetRoute = () => getContext(ROUTE_SYMBOL);
 
@@ -112,7 +113,7 @@ function readonly<T extends object>(target: T): Readonly<T> {
  * In production, `vite-plugin-ruta` simply re-exports all APIs to reduce
  * bundle size.
  *
- * @private
+ * @internal
  */
 export function getTypedAPI<
 	TRouter extends RutaSvelte,

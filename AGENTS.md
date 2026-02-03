@@ -29,7 +29,7 @@ A file for [guiding coding agents](https://agents.md/).
 - Use `@ts-expect-error` sparingly with explanation.
 - Imports: named imports from local `.ts` files with explicit `.ts` extension.
 - Type exports: use `export type` for type-only exports.
-- Make sure all exported APIs in `mod.ts` have JSDoc and either `@private` or `@public` tag.
+- Make sure all exported APIs in `mod.ts` have JSDoc and either `@internal` or `@public` tag.
 - Warning or assertion messages should be all lowercase with a full stop except when referring to
   identifiers, the case should be matched with the code.
 - Hard limit comment line length at 80.

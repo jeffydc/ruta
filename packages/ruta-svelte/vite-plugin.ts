@@ -1,3 +1,8 @@
+/**
+ * The `vite-plugin-ruta`.
+ * @module
+ */
+
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,7 +24,8 @@ const __filename = fileURLToPath(import.meta.url);
 fs.writeFile(
 	path.resolve(__filename, '../components.ts'),
 	`
-export { default as MatchedRoutes } from "./MatchedRoutes.svelte";
+export { default as MatchedRoutes } from './MatchedRoutes.svelte';
+export { default as RethrowError } from './RethrowError.svelte';
 `.trim(),
 );
 

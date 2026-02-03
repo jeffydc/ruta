@@ -1,5 +1,6 @@
 /**
  * The `vite-plugin-ruta`.
+ * @module
  */
 
 import * as fs from 'node:fs';
@@ -192,7 +193,7 @@ export function ruta(rawOptions: VitePluginRutaOptions): Plugin {
 	};
 }
 
-/** @private */
+/** @internal */
 export class VPR {
 	#contents = new Map<string, string>();
 	readonly routeDirMap: Map<string, RouteDirData> = new Map<string, RouteDirData>();
@@ -210,7 +211,7 @@ export class VPR {
 	routePageFile = '+page.js';
 	isBuild = false;
 
-	/** @private */
+	/** @internal */
 	constructor(options: Required<VitePluginRutaOptions>) {
 		this.framework = options.framework;
 		this.routerModule = options.routerModule;
@@ -222,12 +223,12 @@ export class VPR {
 		this.root = process.cwd();
 	}
 
-	/** @private */
+	/** @internal */
 	get root(): string {
 		return this.#root;
 	}
 
-	/** @private */
+	/** @internal */
 	set root(root: string) {
 		this.#root = root;
 		this.dotRuta = path.resolve(root, this.dotRuta);
@@ -237,7 +238,7 @@ export class VPR {
 		this.routesGenFile = path.resolve(this.srcDir, this.routesGenFile);
 	}
 
-	/** @private */
+	/** @internal */
 	init() {
 		mkdirp(this.routeDir);
 		fs.rmSync(this.dotRuta, { force: true, recursive: true });
@@ -246,7 +247,7 @@ export class VPR {
 		this.writeRoutes(true);
 	}
 
-	/** @private */
+	/** @internal */
 	visitRouteDir(dir: string) {
 		const entries = fs.readdirSync(dir, {
 			encoding: 'utf8',
@@ -286,12 +287,12 @@ export class VPR {
 		}
 	}
 
-	/** @private */
+	/** @internal */
 	normalizeGenDir(dir: string): string {
 		return path.resolve(this.dotRuta, path.relative(this.#root, dir));
 	}
 
-	/** @private */
+	/** @internal */
 	writeDefaults() {
 		const tsconfig = {
 			compilerOptions: {
@@ -307,7 +308,7 @@ export class VPR {
 		this.writeIfChanged(`${this.dotRuta}/tsconfig.json`, JSON.stringify(tsconfig, null, '\t'));
 	}
 
-	/** @private */
+	/** @internal */
 	writeAll = (): void => {
 		for (const routeDirData of this.routeDirMap.values()) {
 			this.writeRoute(routeDirData, true);
@@ -315,7 +316,7 @@ export class VPR {
 		this.writeRoutes(true);
 	};
 
-	/** @private */
+	/** @internal */
 	writeRoute(routeDirData: RouteDirData, write: boolean): string {
 		const { configFile } = routeDirData;
 		if (!configFile) return '';
@@ -359,7 +360,7 @@ export class VPR {
 		return codeStr;
 	}
 
-	/** @private */
+	/** @internal */
 	writeRoutes(write: boolean): string {
 		const codes = [];
 
@@ -412,14 +413,14 @@ export class VPR {
 		return codeStr;
 	}
 
-	/** @private */
+	/** @internal */
 	writeIfChanged(file: string, code: string) {
 		if (code !== this.#contents.get(file)) {
 			this.write(file, code);
 		}
 	}
 
-	/** @private */
+	/** @internal */
 	write(file: string, code: string) {
 		file = path.resolve(file);
 		this.#contents.set(file, code);
@@ -427,7 +428,7 @@ export class VPR {
 		fs.writeFileSync(file, code);
 	}
 
-	/** @private */
+	/** @internal */
 	isRouteConfigFile(file: string): boolean {
 		file = path.basename(file);
 		return (
@@ -435,19 +436,19 @@ export class VPR {
 		);
 	}
 
-	/** @private */
+	/** @internal */
 	isRouteErrorFile(file: string): boolean {
 		file = path.basename(file);
 		return file.startsWith(routePrefix) && file.endsWith(this.routeErrorFile);
 	}
 
-	/** @private */
+	/** @internal */
 	isRouteLayoutFile(file: string): boolean {
 		file = path.basename(file);
 		return file.startsWith(routePrefix) && file.endsWith(this.routeLayoutFile);
 	}
 
-	/** @private */
+	/** @internal */
 	isRoutePageFile(file: string): boolean {
 		file = path.basename(file);
 		return file.startsWith(routePrefix) && file.endsWith(this.routePageFile);

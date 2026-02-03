@@ -1,5 +1,6 @@
 /**
  * ruta-vue entrypoint.
+ * @module
  */
 
 import type { Route, RutaOptions } from '@jeffydc/ruta-core';
@@ -23,14 +24,14 @@ export {
 /**
  * Symbol for providing/injecting the router instance.
  *
- * @private
+ * @internal
  */
 const ROUTER_SYMBOL = Symbol();
 
 /**
  * Symbol for providing/injecting the current route.
  *
- * @private
+ * @internal
  */
 const ROUTE_SYMBOL = Symbol();
 
@@ -59,7 +60,7 @@ class RutaVue<TRoutes extends Record<string, any> = Record<string, any>> extends
 	/**
 	 * Vue plugin installation method.
 	 *
-	 * @private
+	 * @internal
 	 */
 	install(app: App) {
 		app.provide(ROUTER_SYMBOL, this);
@@ -70,28 +71,28 @@ class RutaVue<TRoutes extends Record<string, any> = Record<string, any>> extends
 /**
  * Type signature for the `useRouter` composable function.
  *
- * @private
+ * @internal
  */
 type GetRouter<T extends RutaVue = RutaVue> = () => T;
 
 /**
  * Type signature for the `useRoute` composable function.
  *
- * @private
+ * @internal
  */
 type GetRoute<T extends Route = Route> = () => T;
 
 /**
  * Composable to access the router instance in Vue components.
  *
- * @private
+ * @internal
  */
 const getRouter: GetRouter = () => inject(ROUTER_SYMBOL)!;
 
 /**
  * Composable to access the current route in Vue components.
  *
- * @private
+ * @internal
  */
 const getRoute: GetRoute = () => inject(ROUTE_SYMBOL)!;
 
@@ -102,7 +103,7 @@ const getRoute: GetRoute = () => inject(ROUTE_SYMBOL)!;
  * In production, `vite-plugin-ruta` simply re-exports all APIs to reduce
  * bundle size.
  *
- * @private
+ * @internal
  */
 export function getTypedAPI<
 	TRouter extends RutaVue,

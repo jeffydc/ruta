@@ -46,7 +46,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	/**
 	 * **TYPE ONLY.**
 	 *
-	 * @private
+	 * @internal
 	 */
 	'~routes': TRoutes;
 
@@ -524,7 +524,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
  * In production, `vite-plugin-ruta` simply re-exports all APIs to reduce
  * bundle size.
  *
- * @private
+ * @internal
  */
 export function getTypedAPI<TRouter extends Ruta, _TLayout, _TPage>(): {
 	redirect: RedirectFn<TRouter['~routes']>;
@@ -538,7 +538,7 @@ export function getTypedAPI<TRouter extends Ruta, _TLayout, _TPage>(): {
 /**
  * Do route redirect.
  *
- * @private
+ * @internal
  */
 export const redirect: RedirectFn<any> = (to) => {
 	throw new Redirect(to);
@@ -606,7 +606,7 @@ export function createRouteBuilder<
 /**
  * Create an empty route, useful for framework integration.
  *
- * @private
+ * @internal
  */
 export function createEmptyRoute(): RouteMut<string, {}, {}> {
 	return {
@@ -635,7 +635,7 @@ function throwIfKnownError(err: unknown) {
  *
  * @__NO_SIDE_EFFECTS__
  *
- * @private
+ * @internal
  */
 export function resolvePath<T extends Array<string>>(...paths: T): ResolvePath<T> {
 	let joined = ('/' + paths.join('/')).replace(MULTI_SLASH_RE, '/');
@@ -648,7 +648,7 @@ export function resolvePath<T extends Array<string>>(...paths: T): ResolvePath<T
  *
  * @__NO_SIDE_EFFECTS__
  *
- * @private
+ * @internal
  */
 export function trimBase(path: string, base: string) {
 	path = path.replace(HTTP_RE, '');
@@ -661,7 +661,7 @@ export function trimBase(path: string, base: string) {
  *
  * @__NO_SIDE_EFFECTS__
  *
- * @private
+ * @internal
  */
 function normalizeBase(base: string) {
 	if (BROWSER && base !== '' && !base) {
@@ -674,7 +674,7 @@ function normalizeBase(base: string) {
 /**
  * @__NO_SIDE_EFFECTS__
  *
- * @private
+ * @internal
  */
 export function warn(msg: string) {
 	console.warn(`[ruta warn]: ${msg}`);
@@ -683,7 +683,7 @@ export function warn(msg: string) {
 /**
  * @__NO_SIDE_EFFECTS__
  *
- * @private
+ * @internal
  */
 function assert(condition: any, msg: string = ''): asserts condition {
 	if (condition) return;
@@ -748,7 +748,7 @@ export type Route<
 /**
  * Mutable version of `Route` type, used internally to assign values.
  *
- * @private
+ * @internal
  */
 type RouteMut<TPath extends string, TParams, TSearch> = {
 	/**
@@ -879,69 +879,69 @@ type AnyMatchedRoute = Pick<AnyRouteConfig, 'path' | 'loads' | 'search'> & {
 /**
  * Route config returned by the route builder.
  *
- * @private
+ * @internal
  */
 type RouteConfig<TParentRouteConfig, TPath extends string, TLayoutRoute, TPageRoute> = {
 	/**
 	 * Resolved absolute pathname.
 	 *
-	 * @private
+	 * @internal
 	 */
 	path: MergePath<TParentRouteConfig, TPath>;
 
 	/**
 	 * URLPattern of this route.
 	 *
-	 * @private
+	 * @internal
 	 */
 	pattern?: URLPattern | null | undefined;
 
 	/**
 	 * All the components (errors + layouts + pages) to this route.
 	 *
-	 * @private
+	 * @internal
 	 */
 	comps: Array<RouteComponent | RouteComponentLazy>;
 
 	/**
 	 * All the load functions to this route.
 	 *
-	 * @private
+	 * @internal
 	 */
 	loads: Array<LoadFn<any, any> | undefined | null>;
 
 	/**
 	 * The parseParams function of this route.
 	 *
-	 * @private
+	 * @internal
 	 */
 	parseParams?: RouteOptions<TParentRouteConfig, TPath, any, any>['parseParams'] | undefined | null;
 
 	/**
 	 * The parseSearch functions (layout + page) of this route.
 	 *
-	 * @private
+	 * @internal
 	 */
 	search: Array<ParseSearchFn<any> | undefined | null>;
 
 	/**
 	 * **TYPE ONLY**. The context of this route.
 	 *
-	 * @private
+	 * @internal
 	 */
 	'~context'?: InferContext<TParentRouteConfig>;
 
 	/**
 	 * **TYPE ONLY**. The layout route of this route.
 	 *
-	 * @private
+	 * @internal
 	 */
 	'~layout': TLayoutRoute;
 
 	/**
 	 * **TYPE ONLY**. The page route of this route.
 	 *
-	 * @private
+	 * @internal
 	 */
 	'~page': TPageRoute;
 };
