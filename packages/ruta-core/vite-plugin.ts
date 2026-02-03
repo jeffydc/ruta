@@ -1,3 +1,7 @@
+/**
+ * The `vite-plugin-ruta`.
+ */
+
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as tty from 'node:tty';
@@ -10,6 +14,8 @@ const PLUGIN_NAME = 'vite-plugin-ruta';
 
 /**
  * Options of vite-plugin-ruta.
+ *
+ * @public
  */
 export type VitePluginRutaOptions = {
 	/**
@@ -52,6 +58,8 @@ const routeGenFile = `+route.gen.ts`;
  * The vite-plugin-ruta.
  * @param rawOptions Options for vite-plugin-ruta
  * @returns A Vite plugin that integrates Ruta with Vite
+ *
+ * @public
  */
 export function ruta(rawOptions: VitePluginRutaOptions): Plugin {
 	const vpr = new VPR({
@@ -184,7 +192,7 @@ export function ruta(rawOptions: VitePluginRutaOptions): Plugin {
 	};
 }
 
-/** @internal */
+/** @private */
 export class VPR {
 	#contents = new Map<string, string>();
 	readonly routeDirMap: Map<string, RouteDirData> = new Map<string, RouteDirData>();
@@ -202,7 +210,7 @@ export class VPR {
 	routePageFile = '+page.js';
 	isBuild = false;
 
-	/** @internal */
+	/** @private */
 	constructor(options: Required<VitePluginRutaOptions>) {
 		this.framework = options.framework;
 		this.routerModule = options.routerModule;
@@ -214,12 +222,12 @@ export class VPR {
 		this.root = process.cwd();
 	}
 
-	/** @internal */
+	/** @private */
 	get root(): string {
 		return this.#root;
 	}
 
-	/** @internal */
+	/** @private */
 	set root(root: string) {
 		this.#root = root;
 		this.dotRuta = path.resolve(root, this.dotRuta);
@@ -229,7 +237,7 @@ export class VPR {
 		this.routesGenFile = path.resolve(this.srcDir, this.routesGenFile);
 	}
 
-	/** @internal */
+	/** @private */
 	init() {
 		mkdirp(this.routeDir);
 		fs.rmSync(this.dotRuta, { force: true, recursive: true });
@@ -238,7 +246,7 @@ export class VPR {
 		this.writeRoutes(true);
 	}
 
-	/** @internal */
+	/** @private */
 	visitRouteDir(dir: string) {
 		const entries = fs.readdirSync(dir, {
 			encoding: 'utf8',
@@ -278,12 +286,12 @@ export class VPR {
 		}
 	}
 
-	/** @internal */
+	/** @private */
 	normalizeGenDir(dir: string): string {
 		return path.resolve(this.dotRuta, path.relative(this.#root, dir));
 	}
 
-	/** @internal */
+	/** @private */
 	writeDefaults() {
 		const tsconfig = {
 			compilerOptions: {
@@ -299,7 +307,7 @@ export class VPR {
 		this.writeIfChanged(`${this.dotRuta}/tsconfig.json`, JSON.stringify(tsconfig, null, '\t'));
 	}
 
-	/** @internal */
+	/** @private */
 	writeAll = (): void => {
 		for (const routeDirData of this.routeDirMap.values()) {
 			this.writeRoute(routeDirData, true);
@@ -307,7 +315,7 @@ export class VPR {
 		this.writeRoutes(true);
 	};
 
-	/** @internal */
+	/** @private */
 	writeRoute(routeDirData: RouteDirData, write: boolean): string {
 		const { configFile } = routeDirData;
 		if (!configFile) return '';
@@ -351,7 +359,7 @@ export class VPR {
 		return codeStr;
 	}
 
-	/** @internal */
+	/** @private */
 	writeRoutes(write: boolean): string {
 		const codes = [];
 
@@ -404,14 +412,14 @@ export class VPR {
 		return codeStr;
 	}
 
-	/** @internal */
+	/** @private */
 	writeIfChanged(file: string, code: string) {
 		if (code !== this.#contents.get(file)) {
 			this.write(file, code);
 		}
 	}
 
-	/** @internal */
+	/** @private */
 	write(file: string, code: string) {
 		file = path.resolve(file);
 		this.#contents.set(file, code);
@@ -419,7 +427,7 @@ export class VPR {
 		fs.writeFileSync(file, code);
 	}
 
-	/** @internal */
+	/** @private */
 	isRouteConfigFile(file: string): boolean {
 		file = path.basename(file);
 		return (
@@ -427,19 +435,19 @@ export class VPR {
 		);
 	}
 
-	/** @internal */
+	/** @private */
 	isRouteErrorFile(file: string): boolean {
 		file = path.basename(file);
 		return file.startsWith(routePrefix) && file.endsWith(this.routeErrorFile);
 	}
 
-	/** @internal */
+	/** @private */
 	isRouteLayoutFile(file: string): boolean {
 		file = path.basename(file);
 		return file.startsWith(routePrefix) && file.endsWith(this.routeLayoutFile);
 	}
 
-	/** @internal */
+	/** @private */
 	isRoutePageFile(file: string): boolean {
 		file = path.basename(file);
 		return file.startsWith(routePrefix) && file.endsWith(this.routePageFile);

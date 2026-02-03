@@ -1,3 +1,7 @@
+/**
+ * ruta-core entrypoint.
+ */
+
 /// <reference types="@types/dom-navigation" />
 /// <reference types="urlpattern-polyfill" />
 

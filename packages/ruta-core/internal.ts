@@ -18,6 +18,8 @@ type Node<T = AnyRouteConfig> = {
  *
  * - RutaVue for Vue.
  * - RutaSvelte for Svelte.
+ *
+ * @public
  */
 export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string, any>> {
 	#ok = false;
@@ -42,8 +44,9 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	#onError;
 
 	/**
-	 * @internal
 	 * **TYPE ONLY.**
+	 *
+	 * @private
 	 */
 	'~routes': TRoutes;
 
@@ -80,7 +83,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		}
 
 		const href = this.href(to);
-		// This needs to check with 2 ifs, otherwise bundlers fail to treeshake.
+		// Two separate ifs are needed here, otherwise bundlers fail to treeshake.
 		if (BROWSER) {
 			if (window.navigation) {
 				const { finished } = window.navigation.navigate(href);
@@ -113,7 +116,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 			for (const [key, paramValue] of Object.entries(params)) {
 				// @ts-expect-error Type 'string' is not assignable to type 'TPath'.
 				path = path
-					// Try replacing with modifiers first
+					// Try replacing with modifiers first.
 					.replace(`:${key}*`, paramValue as string)
 					.replace(`:${key}+`, paramValue as string)
 					.replace(`:${key}?`, paramValue as string)
@@ -150,7 +153,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 
 			this.#signal = e.signal;
 			e.intercept({
-				// @ts-expect-error type is not updated yet
+				// @ts-expect-error upstream type package is not updated yet
 				precommitHandler: async (controller) => {
 					const to = await this.#handleNavigate(destination.url);
 					controller.redirect(to);
@@ -195,14 +198,14 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	/**
 	 * Run navigation hooks or load functions (a variant of hook).
 	 *
-	 * @param hooks before hooks or after hooks or load functions
-	 * @param isHook whether running hook fn
-	 * @throws it throws on Ruta specific known errors
+	 * @param hooks Before hooks or after hooks or load functions.
+	 * @param isHook Whether it is to run navigation hooks.
+	 * @throws It throws on Ruta specific known errors.
 	 */
 	async #runHooks(hooks: Array<NavigationHook<TRoutes>> | AnyMatchedRoute['loads'], isHook = true) {
 		if (!hooks.length) return;
-		// Navigation hooks always run regardless of existing errors, but other
-		// hooks (i.e. load hook) do not need to.
+		// Navigation hooks always run regardless of existing errors, but other hooks
+		// (i.e. load hook) do not need to.
 		if (!isHook && this.#to.error) return;
 		assert(this.#signal, `AbortSignal should be defined, please file an issue.`);
 
@@ -228,11 +231,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	}
 
 	/**
-	 * Universal navigation entrypoint.
-	 *
-	 * @param href href string
-	 * @param redirect Environment specific redirect function
-	 * @param preload Whether to do preload
+	 * Universal navigation entrypoint. It also handles redirects.
 	 */
 	async #handleNavigate(href: string, preload?: boolean): Promise<string> {
 		if (!BROWSER) {
@@ -247,6 +246,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 			if (err instanceof Redirect) {
 				return await this.#handleNavigate(err.to, preload);
 			}
+			// Below should be unexpected unhandled error.
 			this.#onError(err as any);
 			throw err;
 		}
@@ -259,12 +259,12 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 	 * - resolve components & run loads
 	 * - run params & search functions
 	 *
-	 * @param href return value of `this.href`
-	 * @param preload whether to preload
-	 * @throws it throws on Ruta specific known errors
+	 * @param href Return value of `this.href`.
+	 * @param preload Whether to preload route.
+	 * @throws It throws on Ruta specific known errors.
 	 */
 	async #matchRoute(href: string, preload = false) {
-		// Exit if navigating to the same URL
+		// Exit early if navigating to the same URL.
 		if (this.#from.href === href) {
 			return;
 		}
@@ -301,7 +301,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		await Promise.all([this.#resolveComps(comps), this.#runHooks(loads, false)]);
 
 		if (!preload) {
-			// TODO: if there is error in after hooks, UI won't be updated since
+			// TODO: If there is error in after hooks, UI won't be updated since
 			// framework UI update is registered in after hooks, but URL is updated.
 			await this.#runHooks(this.#hooksAfter);
 			this.#from = {
@@ -329,7 +329,7 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 				this.#to.comps.push(result.value);
 			} //
 			else if (result.status === 'rejected') {
-				// Push an empty component slot to render error
+				// Push an empty component slot to render error.
 				this.#to.comps.push(null);
 				this.#to.error = throwIfKnownError(result.reason);
 				this.#to.errorIndex = Math.floor(i / 2);
@@ -341,8 +341,8 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 
 	/**
 	 * Insert a node to a Trie.
-	 * @param absPath full pathname.
-	 * @param route route data to insert.
+	 * @param absPath Full pathname.
+	 * @param route Route data to insert.
 	 */
 	#insert(absPath: string, route: AnyRouteConfig) {
 		assert(absPath === route.path, `${absPath} should be ${route.path}, please file an issue.`);
@@ -380,8 +380,8 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 
 	/**
 	 * Lookup a node data in a Trie.
-	 * @param absPath absolute pathname
-	 * @returns node if found, null otherwise.
+	 * @param absPath Absolute pathname.
+	 * @returns Node if found, null otherwise.
 	 */
 	#lookup(absPath: string): AnyMatchedRoute | null {
 		let node = this.#rootNode;
@@ -393,18 +393,19 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		const search = [];
 
 		let index = 0;
-		let found = true; // True first to add root node data
+		// True first to add root node data
+		let found = true;
 		while (true) {
-			// Root route is always matched, so need to add its data
-			// First, and continue the lookup.
+			// Root route is always matched, so need to add its data first,
+			// and continue the lookup.
 			if (found) {
 				found = false;
 				assert(node.data, `node.data should be defined, please file an issue.`);
-				// Load function of +layout component of this route
+				// Load function of +layout component of this route.
 				loads.push(node.data.loads[0]);
-				// Search function of +layout component of this route
+				// Search function of +layout component of this route.
 				search.push(node.data.search[0]);
-				// +error, +layout components of this route
+				// +error, +layout components of this route.
 				this.#queueComps(node.data, comps, 0, 2);
 			}
 			if (index >= segments.length) break;
@@ -430,11 +431,11 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		}
 
 		assert(node.data, `node.data should be defined, please file an issue.`);
-		// Load function of +page component of this route
+		// Load function of +page component of this route.
 		loads.push(node.data.loads[1]);
-		// ParseSearch function of +page component of this route
+		// ParseSearch function of +page component of this route.
 		search.push(node.data.search[1]);
-		// +error, +page components of this route
+		// +error, +page components of this route.
 		this.#queueComps(node.data, comps, 2, 4);
 		assert(comps.length, `comps should not be empty, please file an issue.`);
 
@@ -486,25 +487,25 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		for (let i = from; i < to; i++) {
 			const comp = route.comps[i];
 			// To note a function like () => import(comp) since Svelte
-			// Components are simply functions
+			// components are simply functions.
 			// @ts-expect-error __ruta is added in node insertion to Trie
 			if (comp && comp.__ruta && typeof comp === 'function') {
 				// Without typecasting here, typechecking in
-				// Ruta-vue, ruta-svelte fails.
+				// ruta-vue, ruta-svelte fails.
 				const promise = (comp as RouteComponentLazy)()
 					.then((c) => {
-						// Replace with the resolved component
+						// Replace with the resolved component.
 						return (route.comps[i] = c.default);
 					})
 					.catch((e: any) => {
 						warn(`failed to load component: ${e}`);
 						throw e;
 					});
-				// Push promise to load the resolved component later
+				// Push promise to load the resolved component later.
 				comps.push(promise);
 			} //
 			else {
-				// Component is already resolved or null placeholder
+				// Component is already resolved or null placeholder.
 				comps.push(comp as RouteComponent);
 			}
 		}
@@ -517,12 +518,13 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 }
 
 /**
- * @internal
  * A helper function that re-exports the APIs which require type
  * augmentation during development.
  *
- * In production, vite-plugin-ruta simply re-exports all APIs to reduce
+ * In production, `vite-plugin-ruta` simply re-exports all APIs to reduce
  * bundle size.
+ *
+ * @private
  */
 export function getTypedAPI<TRouter extends Ruta, _TLayout, _TPage>(): {
 	redirect: RedirectFn<TRouter['~routes']>;
@@ -533,7 +535,11 @@ export function getTypedAPI<TRouter extends Ruta, _TLayout, _TPage>(): {
 	return { redirect };
 }
 
-/** Do route redirect. */
+/**
+ * Do route redirect.
+ *
+ * @private
+ */
 export const redirect: RedirectFn<any> = (to) => {
 	throw new Redirect(to);
 };
@@ -545,10 +551,12 @@ class Redirect<TPath extends string, TRoutes extends Record<string, AnyRouteConf
 /**
  * A route builder to build the layout view and page view of the route.
  *
- * @param parent parent route or null if creating root route
- * @param path path segment of this route
- * @returns an object with `layout`, `page` functions to create layout
+ * @param parent Parent route or null if creating root route.
+ * @param path Path segment of this route.
+ * @returns An object with `layout`, `page` functions to create layout
  * route or page route respectively.
+ *
+ * @public
  */
 export function createRouteBuilder<
 	TParentRouteConfig extends AnyRouteConfig | null,
@@ -597,6 +605,8 @@ export function createRouteBuilder<
 
 /**
  * Create an empty route, useful for framework integration.
+ *
+ * @private
  */
 export function createEmptyRoute(): RouteMut<string, {}, {}> {
 	return {
@@ -620,10 +630,12 @@ function throwIfKnownError(err: unknown) {
 }
 
 /**
- * @__NO_SIDE_EFFECTS__
- * @internal
  * - Join all the paths with `/`.
  * - Ensure a leading `/` and no trailing `/`.
+ *
+ * @__NO_SIDE_EFFECTS__
+ *
+ * @private
  */
 export function resolvePath<T extends Array<string>>(...paths: T): ResolvePath<T> {
 	let joined = ('/' + paths.join('/')).replace(MULTI_SLASH_RE, '/');
@@ -632,9 +644,11 @@ export function resolvePath<T extends Array<string>>(...paths: T): ResolvePath<T
 }
 
 /**
- * @__NO_SIDE_EFFECTS__
- * @internal
  * Trim the `base` from the `path` prefix.
+ *
+ * @__NO_SIDE_EFFECTS__
+ *
+ * @private
  */
 export function trimBase(path: string, base: string) {
 	path = path.replace(HTTP_RE, '');
@@ -643,9 +657,11 @@ export function trimBase(path: string, base: string) {
 }
 
 /**
- * @__NO_SIDE_EFFECTS__
- * @internal
  * Use the provided `base` or get from the `href` attribute of `<base>` tag.
+ *
+ * @__NO_SIDE_EFFECTS__
+ *
+ * @private
  */
 function normalizeBase(base: string) {
 	if (BROWSER && base !== '' && !base) {
@@ -657,7 +673,8 @@ function normalizeBase(base: string) {
 
 /**
  * @__NO_SIDE_EFFECTS__
- * @internal
+ *
+ * @private
  */
 export function warn(msg: string) {
 	console.warn(`[ruta warn]: ${msg}`);
@@ -665,7 +682,8 @@ export function warn(msg: string) {
 
 /**
  * @__NO_SIDE_EFFECTS__
- * @internal
+ *
+ * @private
  */
 function assert(condition: any, msg: string = ''): asserts condition {
 	if (condition) return;
@@ -678,8 +696,9 @@ function assert(condition: any, msg: string = ''): asserts condition {
 ///////////////////////////////////////////// TYPES ////////////////////////////////////////////////
 
 /**
- * @public
  * Ruta class options.
+ *
+ * @public
  */
 export type RutaOptions<
 	TRoutes extends Record<string, AnyRouteConfig> = Record<string, AnyRouteConfig>,
@@ -716,8 +735,9 @@ type RutaOptionsShared<TRoutes> = {
 };
 
 /**
+ * Return type of `getRoute`, `useRoute`.
+ *
  * @public
- * Return type of getRoute, useRoute.
  */
 export type Route<
 	TPath extends string = string,
@@ -726,8 +746,9 @@ export type Route<
 > = Readonly<RouteMut<TPath, TParams, TSearch>>;
 
 /**
- * @internal
  * Mutable version of `Route` type, used internally to assign values.
+ *
+ * @private
  */
 type RouteMut<TPath extends string, TParams, TSearch> = {
 	/**
@@ -767,20 +788,12 @@ type RouteMut<TPath extends string, TParams, TSearch> = {
 	errorIndex?: number | null;
 };
 
-/**
- * @internal
- * A short hand to create mutable `Route` type.
- */
 type MakeRouteMut<TParentRouteConfig, TPath extends string, TParams, TSearch> = RouteMut<
 	MergePath<TParentRouteConfig, TPath>,
 	MergeParams<TParentRouteConfig, TParams>,
 	MergeSearch<TParentRouteConfig, TSearch>
 >;
 
-/**
- * @internal
- * A builder that builds the layout of a route.
- */
 type LayoutBuilder<TParentRouteConfig, TPath extends string> = <
 	TParams = ParseParams<TPath>,
 	TSearch = {},
@@ -805,10 +818,6 @@ type LayoutBuilder<TParentRouteConfig, TPath extends string> = <
 	>;
 };
 
-/**
- * @internal
- * A builder that builds the page of a route.
- */
 type PageBuilder<TParentRouteConfig, TPath extends string> = <
 	TParams = ParseParams<TPath>,
 	TSearch = {},
@@ -823,10 +832,6 @@ type PageBuilder<TParentRouteConfig, TPath extends string> = <
 	>
 >;
 
-/**
- * @public
- * Options of `createRoute`'s `layout`, `page` functions.
- */
 type RouteOptions<TParentRouteConfig, TPath extends string, TParams, TSearch> = {
 	load?: LoadFn<
 		InferContext<TParentRouteConfig>,
@@ -872,95 +877,85 @@ type AnyMatchedRoute = Pick<AnyRouteConfig, 'path' | 'loads' | 'search'> & {
 };
 
 /**
- * @internal
- * Flatten route type returned by route builder.
+ * Route config returned by the route builder.
+ *
+ * @private
  */
 type RouteConfig<TParentRouteConfig, TPath extends string, TLayoutRoute, TPageRoute> = {
 	/**
-	 * @internal
 	 * Resolved absolute pathname.
+	 *
+	 * @private
 	 */
 	path: MergePath<TParentRouteConfig, TPath>;
 
 	/**
-	 * @internal
 	 * URLPattern of this route.
+	 *
+	 * @private
 	 */
 	pattern?: URLPattern | null | undefined;
 
 	/**
-	 * @internal
 	 * All the components (errors + layouts + pages) to this route.
+	 *
+	 * @private
 	 */
 	comps: Array<RouteComponent | RouteComponentLazy>;
 
 	/**
-	 * @internal
 	 * All the load functions to this route.
+	 *
+	 * @private
 	 */
 	loads: Array<LoadFn<any, any> | undefined | null>;
 
 	/**
-	 * @internal
 	 * The parseParams function of this route.
+	 *
+	 * @private
 	 */
 	parseParams?: RouteOptions<TParentRouteConfig, TPath, any, any>['parseParams'] | undefined | null;
 
 	/**
-	 * @internal
 	 * The parseSearch functions (layout + page) of this route.
+	 *
+	 * @private
 	 */
 	search: Array<ParseSearchFn<any> | undefined | null>;
 
 	/**
-	 * @internal
 	 * **TYPE ONLY**. The context of this route.
+	 *
+	 * @private
 	 */
 	'~context'?: InferContext<TParentRouteConfig>;
 
 	/**
-	 * @internal
 	 * **TYPE ONLY**. The layout route of this route.
+	 *
+	 * @private
 	 */
 	'~layout': TLayoutRoute;
 
 	/**
-	 * @internal
 	 * **TYPE ONLY**. The page route of this route.
+	 *
+	 * @private
 	 */
 	'~page': TPageRoute;
 };
 
-/**
- * @internal
- * Type signature of `parseParams` function.
- */
-type ParseParamsFn<
-	TPath extends string,
-	TParams,
-	// _ParsedParams = ParseParams<TPath>,
-> = (
+type ParseParamsFn<TPath extends string, TParams> = (
 	params: Readonly<ParseParams<TPath>>,
 ) => TParams extends ParseParams<TPath, any> ? TParams : ParseParams<TPath, any>;
 
-/**
- * @internal
- * Type signature of `parseSearch` function.
- */
 type ParseSearchFn<TSearch> = (search: URLSearchParams) => TSearch;
 
-/**
- * @internal
- * Type signature of navigation hook function.
- */
 type NavigationHook<TRoutes extends Record<string, AnyRouteConfig>> = (
 	args: NavigationHookArgs<TRoutes>,
 ) => MaybePromise<void>;
 
-/**
- * @internal
- * Arguments for navigation hook function.
- */
 export type NavigationHookArgs<
 	TRoutes extends Record<string, AnyRouteConfig>,
 	TContext extends TRoutes['/']['~context'] = TRoutes['/']['~context'],
@@ -977,10 +972,6 @@ export type NavigationHookArgs<
 	signal: AbortSignal;
 };
 
-/**
- * @internal
- * Type signature of load function.
- */
 type LoadFn<TContext, TTo extends Route> = (args: LoadFnArgs<TContext, TTo>) => MaybePromise<void>;
 
 type LoadFnArgs<TContext, TTo extends Route> = Omit<NavigationHookArgs<{}, TContext, TTo>, 'from'>;
@@ -990,21 +981,14 @@ type RedirectFn<TRoutes extends Record<string, AnyRouteConfig>> = (
 ) => void;
 
 /**
- * @public
  * Register a framework specific component type.
+ *
+ * @public
  */
 export interface Register {}
 
-/**
- * @internal
- * The argument signature of `navigate` function.
- */
 type StaticPaths<T> = T extends `${string}:${string}` ? never : T;
 
-/**
- * @internal
- * The argument signature of `navigate` function.
- */
 type ToOptions<
 	TPath extends string,
 	TRoutes extends Record<string, AnyRouteConfig>,

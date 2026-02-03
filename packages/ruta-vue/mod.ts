@@ -1,3 +1,7 @@
+/**
+ * ruta-vue entrypoint.
+ */
+
 import type { Route, RutaOptions } from '@jeffydc/ruta-core';
 import { Ruta, createEmptyRoute, getTypedAPI as _getTypedAPI } from '@jeffydc/ruta-core';
 import type { App, DefineComponent, VNode } from 'vue';
@@ -16,9 +20,18 @@ export {
 	getRouter as useRouter,
 };
 
-/** @internal Symbol for providing/injecting the router instance. */
+/**
+ * Symbol for providing/injecting the router instance.
+ *
+ * @private
+ */
 const ROUTER_SYMBOL = Symbol();
-/** @internal Symbol for providing/injecting the current route. */
+
+/**
+ * Symbol for providing/injecting the current route.
+ *
+ * @private
+ */
 const ROUTE_SYMBOL = Symbol();
 
 /**
@@ -26,6 +39,8 @@ const ROUTE_SYMBOL = Symbol();
  *
  * Extends the base `Ruta` class to provide Vue-specific functionality
  * including reactive route state and Vue plugin installation.
+ *
+ * @public
  */
 class RutaVue<TRoutes extends Record<string, any> = Record<string, any>> extends Ruta<TRoutes> {
 	#route = shallowReactive<Route>(createEmptyRoute());
@@ -42,8 +57,9 @@ class RutaVue<TRoutes extends Record<string, any> = Record<string, any>> extends
 	}
 
 	/**
-	 * @internal
 	 * Vue plugin installation method.
+	 *
+	 * @private
 	 */
 	install(app: App) {
 		app.provide(ROUTER_SYMBOL, this);
@@ -52,36 +68,41 @@ class RutaVue<TRoutes extends Record<string, any> = Record<string, any>> extends
 }
 
 /**
- * @internal
  * Type signature for the `useRouter` composable function.
+ *
+ * @private
  */
 type GetRouter<T extends RutaVue = RutaVue> = () => T;
 
 /**
- * @internal
  * Type signature for the `useRoute` composable function.
+ *
+ * @private
  */
 type GetRoute<T extends Route = Route> = () => T;
 
 /**
- * @internal
  * Composable to access the router instance in Vue components.
+ *
+ * @private
  */
 const getRouter: GetRouter = () => inject(ROUTER_SYMBOL)!;
 
 /**
- * @internal
  * Composable to access the current route in Vue components.
+ *
+ * @private
  */
 const getRoute: GetRoute = () => inject(ROUTE_SYMBOL)!;
 
 /**
- * @internal
  * A helper function that re-exports the APIs which require type
  * augmentation during development.
  *
- * In production, vite-plugin-ruta simply re-exports all APIs to reduce
+ * In production, `vite-plugin-ruta` simply re-exports all APIs to reduce
  * bundle size.
+ *
+ * @private
  */
 export function getTypedAPI<
 	TRouter extends RutaVue,
@@ -110,14 +131,29 @@ const RethrowError = defineComponent({
 	},
 });
 
+/**
+ * A Vue component that renders the respective components of the matched route.
+ *
+ * Think of it like `RouterView`, but it will render all components recursively
+ * so only need to use once.
+ *
+ * ```vue
+ * <!-- App.vue -->
+ * <template>
+ *   <MatchedRoutes />
+ * </template>
+ * ```
+ *
+ * @public
+ */
 const MatchedRoutes: DefineComponent = defineComponent({
 	name: 'MatchedRoutes',
-	setup(_, { slots }) {
+	setup() {
 		const route = getRoute();
 
 		const render = (index: number): VNode | VNode[] | null => {
 			if (index >= route.comps.length) {
-				return slots.default?.() ?? null;
+				return null;
 			}
 			if (route.errorIndex != null && route.errorIndex > -1 && route.errorIndex * 2 + 1 === index) {
 				return h(RethrowError);

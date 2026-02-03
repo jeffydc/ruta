@@ -1,3 +1,7 @@
+/**
+ * The `vite-plugin-ruta`.
+ */
+
 import { ruta as _ruta } from '@jeffydc/ruta-core/vite';
 import type { VitePluginRutaOptions as _VitePluginRutaOptions } from '@jeffydc/ruta-core/vite';
 import type { Plugin } from 'vite';
@@ -6,13 +10,18 @@ import pkg from './deno.json' with { type: 'json' };
 
 /**
  * Options of vite-plugin-ruta.
+ *
+ * @public
  */
 export type VitePluginRutaOptions = Omit<_VitePluginRutaOptions, 'framework' | 'pkg'>;
 
 /**
- * The vite-plugin-ruta.
+ * The `vite-plugin-ruta`.
+ *
  * @param rawOptions Options for vite-plugin-ruta
  * @returns A Vite plugin that integrates Ruta with Vite
+ *
+ * @public
  */
 export function ruta(options?: VitePluginRutaOptions): Plugin {
 	return _ruta({ ...options, framework: 'vue', pkg: pkg.name });

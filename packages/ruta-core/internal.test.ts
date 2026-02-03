@@ -260,7 +260,7 @@ suite(`${Ruta.name} params`, () => {
 		expect(ruta.currentRoute.search).toStrictEqual({});
 	});
 
-	test(`nested static children (2 levels)`, async () => {
+	test(`static children (2 levels)`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		const child = createRouteBuilder(root, 'child').layout().page();
 		const nested = createRouteBuilder(child, 'nested').layout().page();
@@ -289,7 +289,7 @@ suite(`${Ruta.name} params`, () => {
 		expect(ruta.currentRoute.search).toStrictEqual({});
 	});
 
-	test(`nested static children (3 levels)`, async () => {
+	test(`static children (3 levels)`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		const child = createRouteBuilder(root, 'child').layout().page();
 		const nested = createRouteBuilder(child, 'nested').layout().page();
@@ -354,7 +354,7 @@ suite(`${Ruta.name} params`, () => {
 		expect(ruta.currentRoute.search).toStrictEqual({});
 	});
 
-	test(`nested dynamic children (2 levels)`, async () => {
+	test(`dynamic children (2 levels)`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		const id = createRouteBuilder(root, ':id')
 			.layout({ parseParams: (p) => ({ id: p.id }) })
@@ -387,7 +387,7 @@ suite(`${Ruta.name} params`, () => {
 		expect(ruta.currentRoute.search).toStrictEqual({});
 	});
 
-	test(`nested dynamic children (3 levels)`, async () => {
+	test(`dynamic children (3 levels)`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		const id = createRouteBuilder(root, ':id')
 			.layout({ parseParams: (p) => ({ id: p.id }) })
@@ -434,7 +434,7 @@ suite(`${Ruta.name} params`, () => {
 		expect(ruta.currentRoute.search).toStrictEqual({});
 	});
 
-	test(`nested static + dynamic children (unmatched route)`, async () => {
+	test(`static + dynamic children (unmatched route)`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		const staticChild = createRouteBuilder(root, 'static').layout().page();
 		const id = createRouteBuilder(staticChild, ':id')
@@ -650,7 +650,7 @@ suite(`${Ruta.name} params`, () => {
 });
 
 suite(`${Ruta.name} search`, () => {
-	test(`root route search params (layout + page)`, async () => {
+	test(`root route`, async () => {
 		const root = createRouteBuilder(null, '/')
 			.layout({
 				parseSearch: (search) => ({ layoutParam: search.get('layoutParam') }),
@@ -765,7 +765,7 @@ suite(`${Ruta.name} search`, () => {
 		});
 	});
 
-	test(`deeply nested search params inheritance`, async () => {
+	test(`nested search params inheritance`, async () => {
 		const root = createRouteBuilder(null, '/')
 			.layout({
 				parseSearch: (search) => ({ rootLayout: search.get('rootLayout') }),
@@ -892,7 +892,7 @@ suite(`${Ruta.name} hooks`, () => {
 });
 
 suite(`${Ruta.name} error handling`, () => {
-	test(`error thrown in root route before hook`, async () => {
+	test(`error in before hook`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		root.comps = [null, rootLayout, null, rootPage];
 		const routes = { [root.path]: root };
@@ -919,7 +919,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`error thrown in later before hook (2nd hook)`, async () => {
+	test(`error in 2nd before hook`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		root.comps = [null, rootLayout, null, rootPage];
 		const routes = { [root.path]: root };
@@ -949,7 +949,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`async error thrown in root route before hook`, async () => {
+	test(`async error in before hook`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		root.comps = [null, rootLayout, null, rootPage];
 		const routes = { [root.path]: root };
@@ -977,7 +977,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`async error thrown in later before hook (2nd hook)`, async () => {
+	test(`async error in 2nd before hook`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		root.comps = [null, rootLayout, null, rootPage];
 		const routes = { [root.path]: root };
@@ -1008,7 +1008,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`error thrown in root route after hook`, async () => {
+	test(`error in after hook`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		root.comps = [null, rootLayout, null, rootPage];
 		const routes = { [root.path]: root };
@@ -1035,7 +1035,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`error thrown in later after hook (2nd hook)`, async () => {
+	test(`error in 2nd after hook`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		root.comps = [null, rootLayout, null, rootPage];
 		const routes = { [root.path]: root };
@@ -1065,7 +1065,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`async error thrown in root route after hook`, async () => {
+	test(`async error in after hook`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		root.comps = [null, rootLayout, null, rootPage];
 		const routes = { [root.path]: root };
@@ -1093,7 +1093,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`async error thrown in later after hook (2nd hook)`, async () => {
+	test(`async error in 2nd after hook`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		root.comps = [null, rootLayout, null, rootPage];
 		const routes = { [root.path]: root };
@@ -1124,7 +1124,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`error thrown in root route layout load hook`, async () => {
+	test(`error in root route layout load hook`, async () => {
 		const testError = new Error('root layout load error');
 		const root = createRouteBuilder(null, '/')
 			.layout({
@@ -1153,7 +1153,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`error thrown in root route page load hook`, async () => {
+	test(`error in root route page load hook`, async () => {
 		const testError = new Error('root page load error');
 		const root = createRouteBuilder(null, '/')
 			.layout()
@@ -1182,7 +1182,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`error thrown in deep nested layout load hook`, async () => {
+	test(`error in nested layout load hook`, async () => {
 		const testError = new Error('nested layout load error');
 		const root = createRouteBuilder(null, '/').layout().page();
 		const child = createRouteBuilder(root, 'child').layout().page();
@@ -1224,7 +1224,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`error thrown in deep nested page load hook`, async () => {
+	test(`error in nested page load hook`, async () => {
 		const testError = new Error('nested page load error');
 		const root = createRouteBuilder(null, '/').layout().page();
 		const child = createRouteBuilder(root, 'child').layout().page();
@@ -1266,7 +1266,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`error thrown in deep nested layout component`, async () => {
+	test(`error in nested layout component`, async () => {
 		const testError = new Error('nested layout component error');
 		const root = createRouteBuilder(null, '/').layout().page();
 		const child = createRouteBuilder(root, 'child').layout().page();
@@ -1307,7 +1307,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`error thrown in deep nested page component`, async () => {
+	test(`error in nested page component`, async () => {
 		const testError = new Error('nested page component error');
 		const root = createRouteBuilder(null, '/').layout().page();
 		const child = createRouteBuilder(root, 'child').layout().page();
@@ -1350,7 +1350,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`parse params`, async () => {
+	test(`error in parse params`, async () => {
 		const testError = new Error('parse params');
 		const root = createRouteBuilder(null, '/').layout().page();
 		const user = createRouteBuilder(root, ':userId').page({
@@ -1389,7 +1389,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`parse search`, async () => {
+	test(`error in parse search`, async () => {
 		const testError = new Error('parse search');
 		const root = createRouteBuilder(null, '/').layout().page();
 		const user = createRouteBuilder(root, ':userId').page({
@@ -1425,7 +1425,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).toHaveBeenCalledWith(testError);
 	});
 
-	test(`redirect before hook`, async () => {
+	test(`redirect in before hook`, async () => {
 		const testError = new Error('redirect before hook');
 		const root = createRouteBuilder(null, '/').layout().page();
 		const child = createRouteBuilder(root, 'child').page();
@@ -1459,7 +1459,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).not.toHaveBeenCalledWith(testError);
 	});
 
-	test(`redirect layout load hook`, async () => {
+	test(`redirect in layout load hook`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		const child = createRouteBuilder(root, 'child')
 			.layout({
@@ -1488,7 +1488,7 @@ suite(`${Ruta.name} error handling`, () => {
 		expect(onError).not.toHaveBeenCalled();
 	});
 
-	test(`redirect page load hook`, async () => {
+	test(`redirect in page load hook`, async () => {
 		const root = createRouteBuilder(null, '/').layout().page();
 		const child = createRouteBuilder(root, 'child')
 			.layout()

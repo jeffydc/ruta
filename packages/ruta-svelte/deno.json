@@ -9,7 +9,7 @@
 		"./components": "./components.ts"
 	},
 	"imports": {
-		"@jeffydc/ruta-core": "jsr:@jeffydc/ruta-core@0",
+		"@jeffydc/ruta-core": "jsr:@jeffydc/ruta-core@^0",
 		"vite": "npm:vite@^7"
 	},
 	"publish": {

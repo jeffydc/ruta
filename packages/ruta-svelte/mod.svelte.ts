@@ -1,5 +1,9 @@
+/**
+ * ruta-svelte entrypoint.
+ */
+
 import type { Route, RutaOptions } from '@jeffydc/ruta-core';
-import { Ruta, createEmptyRoute, warn } from '@jeffydc/ruta-core';
+import { Ruta, createEmptyRoute, getTypedAPI as _getTypedAPI, warn } from '@jeffydc/ruta-core';
 import { getContext, setContext } from 'svelte';
 
 export * from '@jeffydc/ruta-core';
@@ -14,9 +18,18 @@ export {
 	getRouter as useRouter,
 };
 
-/** @internal Symbol for setting/getting the router instance from context. */
+/**
+ * Symbol for setting/getting the router instance from context.
+ *
+ * @private
+ */
 const ROUTER_SYMBOL = Symbol();
-/** @internal Symbol for setting/getting the current route from context. */
+
+/**
+ * Symbol for setting/getting the current route from context.
+ *
+ * @private
+ */
 const ROUTE_SYMBOL = Symbol();
 
 /**
@@ -24,6 +37,8 @@ const ROUTE_SYMBOL = Symbol();
  *
  * Extends the base `Ruta` class to provide Svelte-specific functionality including
  * reactive route state and Svelte context-based installation.
+ *
+ * @public
  */
 class RutaSvelte<TRoutes extends Record<string, any> = Record<string, any>> extends Ruta<TRoutes> {
 	#route: Route = $state(createEmptyRoute());
@@ -50,38 +65,68 @@ class RutaSvelte<TRoutes extends Record<string, any> = Record<string, any>> exte
 }
 
 /**
- * @internal
  * Type signature for the `getRouter` function.
+ *
+ * @private
  */
 type GetRouter<T extends RutaSvelte = RutaSvelte> = () => T;
 
 /**
- * @internal
  * Type signature for the `getRoute` function.
+ *
+ * @private
  */
 type GetRoute<T extends Route = Route> = () => T;
 
 /**
- * @internal
  * Get the router instance from Svelte context.
+ *
+ * @private
  */
 const getRouter: GetRouter = () => getContext(ROUTER_SYMBOL);
 
 /**
- * @internal
  * Get the current route from Svelte context.
+ *
+ * @private
  */
 const getRoute: GetRoute = () => getContext(ROUTE_SYMBOL);
 
 function readonly<T extends object>(target: T): Readonly<T> {
 	return new Proxy(target, {
 		set() {
-			warn('Route is readonly');
+			warn('route is readonly.');
 			return true;
 		},
 		deleteProperty() {
-			warn('Route is readonly');
+			warn('route is readonly.');
 			return true;
 		},
 	});
+}
+
+/**
+ * A helper function that re-exports the APIs which require type augmentation
+ * during development.
+ *
+ * In production, `vite-plugin-ruta` simply re-exports all APIs to reduce
+ * bundle size.
+ *
+ * @private
+ */
+export function getTypedAPI<
+	TRouter extends RutaSvelte,
+	TLayoutRoute extends Route,
+	TPageRoute extends Route,
+>(): ReturnType<typeof _getTypedAPI<TRouter, TLayoutRoute, TLayoutRoute>> & {
+	useRouter: GetRouter<TRouter>;
+	usePageRoute: GetRoute<TPageRoute>;
+	useLayoutRoute: GetRoute<TLayoutRoute>;
+} {
+	return {
+		..._getTypedAPI(),
+		useRouter: getRouter,
+		usePageRoute: getRoute,
+		useLayoutRoute: getRoute,
+	} as any;
 }
