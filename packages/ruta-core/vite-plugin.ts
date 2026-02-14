@@ -260,17 +260,18 @@ export class VPR {
 			if (entry.isFile()) {
 				if (!entry.name.startsWith(routePrefix)) continue;
 
-				if (this.isRouteConfigFile(entry.name)) {
-					routeDirData.configFile = path.resolve(entry.parentPath, entry.name);
+				const file = path.resolve(entry.parentPath, entry.name);
+				if (this.isRouteConfigFile(file)) {
+					routeDirData.configFile = file;
 				} //
-				else if (this.isRouteErrorFile(entry.name)) {
-					routeDirData.errorFile = path.resolve(entry.parentPath, entry.name);
+				else if (this.isRouteErrorFile(file)) {
+					routeDirData.errorFile = file;
 				} //
-				else if (this.isRouteLayoutFile(entry.name)) {
-					routeDirData.layoutFile = path.resolve(entry.parentPath, entry.name);
+				else if (this.isRouteLayoutFile(file)) {
+					routeDirData.layoutFile = file;
 				} //
-				else if (this.isRoutePageFile(entry.name)) {
-					routeDirData.pageFile = path.resolve(entry.parentPath, entry.name);
+				else if (this.isRoutePageFile(file)) {
+					routeDirData.pageFile = file;
 				}
 			} //
 			else if (entry.isDirectory()) {
@@ -318,18 +319,14 @@ export class VPR {
 
 	/** @internal */
 	writeRoute(routeDirData: RouteDirData, write: boolean): string {
-		const { configFile } = routeDirData;
+		const { configFile, dir } = routeDirData;
+		const parentRouteDirData = this.routeDirMap.get(path.dirname(dir));
 		if (!configFile) return '';
 
 		const routeDir = path.dirname(configFile);
-		const isRoot = routeDir === this.routeDir;
 		const genDir = this.normalizeGenDir(routeDir);
 
 		const current = relImportPath(genDir, configFile);
-		const parent = relImportPath(
-			genDir,
-			path.resolve(configFile, '../..', path.basename(configFile)),
-		);
 		const routerModule = relImportPath(genDir, this.routerModule);
 
 		const codes = [
@@ -337,7 +334,8 @@ export class VPR {
 			`import { route as current } from "${current}";`,
 		];
 
-		if (!isRoot) {
+		if (parentRouteDirData && parentRouteDirData.configFile) {
+			const parent = relImportPath(genDir, parentRouteDirData.configFile);
 			codes.push(`export { route as parentRoute } from "${parent}";`);
 		}
 

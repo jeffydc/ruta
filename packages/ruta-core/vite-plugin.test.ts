@@ -43,18 +43,22 @@ test('writeRoute should write root route', () => {
 
 test('writeRoute should write export parent route', () => {
 	const vpr = new VPR(makeOptions());
+	vpr.routeDirMap.set(vpr.routeDir, {
+		dir: vpr.routeDir,
+		configFile: vpr.routeDir + '/+root-config.ts',
+	});
 	const code = vpr.writeRoute(
 		{
 			dir: vpr.routeDir + '/no-layout',
-			configFile: vpr.routeDir + '/no-layout/+route.config.ts',
+			configFile: vpr.routeDir + '/no-layout/+no-layout-config.ts',
 		},
 		false,
 	);
 
 	expect(code).toMatchInlineSnapshot(`
 		"import * as $ from "@jeffydc/ruta-core";
-		import { route as current } from "./../../../../src/routes/no-layout/+route.config.ts";
-		export { route as parentRoute } from "./../../../../src/routes/+route.config.ts";
+		import { route as current } from "./../../../../src/routes/no-layout/+no-layout-config.ts";
+		export { route as parentRoute } from "./../../../../src/routes/+root-config.ts";
 		type Router = import("./../../../../src/router.ts").Router;
 		type Layout = typeof current["~layout"];
 		type Page = typeof current["~page"];
