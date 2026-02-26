@@ -147,9 +147,9 @@ export class Ruta<TRoutes extends Record<string, AnyRouteConfig> = Record<string
 		if (!BROWSER) return;
 
 		window.navigation.addEventListener('navigate', (e) => {
-			const { canIntercept, downloadRequest, hashChange, destination } = e;
+			const { canIntercept, downloadRequest, hashChange, destination, formData } = e;
 
-			if (!canIntercept || downloadRequest || hashChange) return;
+			if (!canIntercept || downloadRequest || hashChange || formData) return;
 
 			this.#signal = e.signal;
 			e.intercept({
